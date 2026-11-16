@@ -5,9 +5,9 @@ A small, **fully synthetic** HR system that the HR Policy Navigator agent calls 
 agent can combine *policy* (from the RAG corpus) with *employee facts* (from a database),
 as the mentor asked on 14 Nov. No real person or company data is used.
 
-Status: **Phases 1 and 2 done** (schema, rules, seed data, read functions, request validation,
-draft / submit / cancel / modify, tests). Still to come: manager approval, API and Streamlit views,
-agent tool wrappers, MCP server, eval items.
+Status: **Phases 1-2 done, Phase 3 in progress.** Done: schema, rules, seed data, read functions, request
+validation, draft / submit / cancel / modify, manager decisions, HTTP API, tests. Still to come: Streamlit
+demo screens, agent tool wrappers, MCP server, eval items.
 
 ## Quickstart
 
@@ -44,12 +44,36 @@ confirmation in the app; the agent tools will never pass it.
 | `submit_request(actor, id, confirmed, doc_attached)` | DRAFT or SENT_BACK to PENDING; the days move into `pending` |
 | `cancel_request(actor, id, confirmed)` | Drafts cancel freely; PENDING and APPROVED need `confirmed`, APPROVED only until its end date |
 | `modify_request(actor, id, start, end, half_day, confirmed)` | Change dates and re-check. APPROVED goes back to PENDING (needs `confirmed`; at DEF the new start must be inside the old dates) |
+| `list_pending_approvals(actor)` | The actor's inbox: pending requests they decide, with the employee's balance |
+| `decide_request(actor, id, decision, note)` | `APPROVE`, `REJECT` or `SEND_BACK` a PENDING request. Only the approver (the reporting manager, or HR for someone with no manager); reject and send back need a note |
 
 ```
-DRAFT --submit--> PENDING --approve--> APPROVED        (approve / reject / send back: manager step, next phase)
+DRAFT --submit--> PENDING --approve--> APPROVED
   |                  |  \--reject--> REJECTED
   |                  \--send back--> SENT_BACK --submit--> PENDING
   \--cancel--> CANCELLED    (PENDING and APPROVED can be cancelled too)
+```
+
+Employee actions (`submit`, `cancel`, `modify`) and manager actions (`decide`) are separate on purpose:
+the agent tools will get only the read functions, `check_leave_request`, `create_leave_draft` and
+`cancel_request` without `confirmed`. Nothing the agent can call files or approves leave.
+
+## HTTP API (`hrms/api.py`, mounted at `/hrms`)
+
+Start the app from `Code/`: `python -m uvicorn hr_navigator.main:app --app-dir src`, then open `/docs`.
+Every call needs the header `X-Employee-Id: D010` (a **demo login**, trusted as is; replace with real
+authentication for anything real). The id is never read from the body.
+
+| Method and path | Service function | Errors |
+|---|---|---|
+| `GET /me`, `/employees/{id}`, `/balance`, `/holidays`, `/manager`, `/requests` | the read functions | 401 unknown user, 403 not allowed, 404 not entitled |
+| `POST /leave/check` | `check_leave_request` | always 200; read `valid` |
+| `POST /requests` | `create_leave_draft` | 201, or 422 with `errors` |
+| `POST /requests/{id}/submit`, `/cancel`, `/modify` | the same-named functions | 409 `confirmation_required` until the body has `"confirmed": true`; 404 if not yours |
+| `GET /approvals`, `POST /requests/{id}/decision` | `list_pending_approvals`, `decide_request` | 404 if you are not the approver, 422 if a note is missing |
+
+```bash
+curl -H "X-Employee-Id: D010" "localhost:8000/hrms/balance?leave_code=EL"
 ```
 
 Checks applied: leave type open to the employee, valid dates within this year, no leave during notice,

@@ -183,7 +183,7 @@ def list_requests(actor_id, emp_id=None, status=None):
 # Only the employee's own confirmation (`confirmed=True`) moves a request out of DRAFT,
 # and the agent tools never pass it, so the agent can prepare a request but never file one.
 # Balance: PENDING days sit in `pending`, APPROVED days in `used`, anything else holds nothing.
-# (approve / reject / send back are added with the manager screens.)
+# Approve / reject / send back are in decide_request at the bottom of this file.
 BLOCKING = ("DRAFT", "PENDING", "APPROVED", "SENT_BACK")  # statuses that occupy their dates
 
 
@@ -476,3 +476,55 @@ def modify_request(actor_id, request_id, start_date, end_date, half_day=None, co
 
     return _run("modify_request", actor_id, {
         "request_id": request_id, "start_date": start_date, "end_date": end_date, "confirmed": confirmed}, body)
+
+
+# --- manager decisions ---------------------------------------------------
+# Only the approver decides: the employee's reporting manager, or HR for someone with no manager
+# (see _approver). Nobody decides their own request, and a skip-level manager cannot decide either.
+# These functions are for the manager screens only; they are never given to the agent.
+DECISIONS = {"APPROVE": "APPROVED", "REJECT": "REJECTED", "SEND_BACK": "SENT_BACK"}
+
+
+def list_pending_approvals(actor_id):
+    """Pending requests waiting for the actor's decision, with the employee's balance for that leave type."""
+    def body(conn, actor):
+        rows = [dict(r) for r in conn.execute(
+            "SELECT r.*, e.name AS employee_name, e.designation, e.department FROM leave_requests r "
+            "JOIN employees e ON e.emp_id = r.emp_id "
+            "WHERE r.status = 'PENDING' AND e.emp_id != ? "
+            "AND (e.manager_id = ? OR (e.manager_id IS NULL AND e.policy_org = ? AND ? = 'hr')) "
+            "ORDER BY r.start_date, r.id",
+            (actor["emp_id"], actor["emp_id"], actor["policy_org"], actor["role"]))]
+        for r in rows:
+            r["balance"] = _one(
+                conn, "SELECT entitled, carried_forward, used, pending FROM leave_balances "
+                      "WHERE emp_id = ? AND leave_code = ? AND year = ?",
+                (r["emp_id"], r["leave_code"], int(r["start_date"][:4])))
+        return _ok(approvals=rows)
+
+    return _run("list_pending_approvals", actor_id, {}, body)
+
+
+def decide_request(actor_id, request_id, decision, note=None):
+    """Approve, reject or send back a PENDING request. `decision` is APPROVE, REJECT or SEND_BACK;
+    rejecting or sending back needs a note, which the employee sees."""
+    def body(conn, actor):
+        req = _one(conn, "SELECT * FROM leave_requests WHERE id = ?", (request_id,))
+        owner = _one(conn, "SELECT * FROM employees WHERE emp_id = ?", (req["emp_id"],)) if req else None
+        approver = _approver(conn, owner) if owner else None
+        if approver is None or approver["emp_id"] != actor["emp_id"] or owner["emp_id"] == actor["emp_id"]:
+            # same answer for "no such request" and "not yours to decide"
+            return _err("not_found", "No leave request #%s found that you can decide." % request_id)
+        new_status = DECISIONS.get(str(decision).upper())
+        if new_status is None:
+            return _err("bad_decision", "The decision must be APPROVE, REJECT or SEND_BACK.")
+        if req["status"] != "PENDING":
+            return _err("invalid_state", "Only a pending request can be decided; this one is %s." % req["status"])
+        if new_status != "APPROVED" and not (note or "").strip():
+            return _err("note_required", "Please give a reason when rejecting a request or sending it back.")
+        _rebook(conn, owner["policy_org"], req, new_status, req["days"])
+        conn.execute("UPDATE leave_requests SET status = ?, decided_by = ?, decided_on = ?, decision_note = ? WHERE id = ?",
+                     (new_status, actor["emp_id"], db.today().isoformat(), (note or "").strip() or None, req["id"]))
+        return _ok(request_id=req["id"], status=new_status, employee_id=owner["emp_id"])
+
+    return _run("decide_request", actor_id, {"request_id": request_id, "decision": decision}, body)

@@ -47,8 +47,10 @@ Fill `API_KEY`, `CHAT_BASE_URL`, and `EMBED_BASE_URL` in `.env` when the course 
 
 ```bash
 source .venv/bin/activate
-uvicorn hr_navigator.main:app --app-dir src --host 127.0.0.1 --port 8000
+python -m uvicorn hr_navigator.main:app --app-dir src --host 127.0.0.1 --port 8000
 ```
+
+Run it from this folder with `python -m uvicorn` (not the bare `uvicorn` command) so the `hrms` package is importable. The dummy HR system's endpoints are under `/hrms`; see `hrms/README.md`.
 
 `GET /health` returns:
 
