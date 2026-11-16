@@ -26,6 +26,7 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 | `app/` | Front end |
 | `deploy/` | Container setup |
 | `traces/` | Redacted sample traces |
+| `tools/mock_llm/` | Local stand-in for the course LLM endpoint (see [Local LLM](#local-llm-stand-in)) |
 | `docs/` | Spec, architecture, corpus datacard, 12-page report |
 
 `data/raw/` and `data/processed/` are rebuilt from manifests and are not committed.
@@ -59,6 +60,16 @@ Run it from this folder with `python -m uvicorn` (not the bare `uvicorn` command
 ```json
 {"status": "ok"}
 ```
+
+## Local LLM stand-in
+
+The course API is rate limited (1 concurrent request, about 60/min, 8192 tokens). To develop without using it, run a local model in LM Studio and start the stand-in, which emulates those limits behind an OpenAI-compatible URL:
+
+```bash
+python -m tools.mock_llm --model llama     # or qwen (not allowed on the office laptop); omit to choose from a menu
+```
+
+Then point `CHAT_BASE_URL`, `CHAT_MODEL` and `API_KEY` at it (the command prints the values; `.env.example` has a commented block). Use it for plumbing only, never for evaluation numbers. Full guide: [`tools/mock_llm/README.md`](tools/mock_llm/README.md).
 
 ## Test
 
