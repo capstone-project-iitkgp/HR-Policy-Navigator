@@ -22,6 +22,10 @@ data/raw/**
 data/processed/**
 !data/processed/.gitkeep
 
+# Dummy HRMS database is generated from hrms/seed_data (python -m hrms.seed)
+hrms/*.db
+hrms/*.db-journal
+
 # Local indexes
 .chroma/
 qdrant_storage/

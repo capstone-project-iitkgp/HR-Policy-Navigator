@@ -1,0 +1,9 @@
+emp_id,leave_code,start_date,end_date,half_day,days,reason,status,created_on,applied_on,decided_by,decided_on,decision_note,doc_attached
+D024,CL,2026-12-07,2026-12-09,0,3,Family function,PENDING,2026-11-12,2026-11-12,,,,0
+B024,CL,2026-12-03,2026-12-04,0,2,Personal work,PENDING,2026-11-13,2026-11-13,,,,0
+D016,SL,2026-11-02,2026-11-03,0,2,Fever,APPROVED,2026-11-03,2026-11-03,D005,2026-11-04,,0
+D013,EL,2026-12-14,2026-12-16,0,3,Travel home,APPROVED,2026-11-05,2026-11-05,D004,2026-11-06,,0
+D019,CL,2026-11-23,2026-11-25,0,3,Short trip,REJECTED,2026-11-12,2026-11-12,D005,2026-11-13,Quarter-end deliverables; please reschedule,0
+D018,CL,2026-11-24,2026-11-24,0,1,Bank work,CANCELLED,2026-11-10,2026-11-10,D018,2026-11-11,Cancelled by employee,0
+B021,CL,2026-11-30,2026-11-30,0,1,,SENT_BACK,2026-11-14,2026-11-14,B003,2026-11-15,Please add a reason for the leave,0
+D010,CL,2026-12-01,2026-12-01,0,1,Personal,DRAFT,2026-11-16,,,,,0

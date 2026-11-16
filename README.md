@@ -26,20 +26,23 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 | `app/` | Front end |
 | `deploy/` | Container setup |
 | `traces/` | Redacted sample traces |
+| `tools/mock_llm/` | Local stand-in for the course LLM endpoint (see [Local LLM](#local-llm-stand-in)) |
 | `docs/` | Spec, architecture, corpus datacard, 12-page report |
 
 `data/raw/` and `data/processed/` are rebuilt from manifests and are not committed.
 
 ## Setup
 
-Requires Python 3.10+.
+Requires Python 3.10 or newer. The latest release (Python 3.15) is the version we use. On macOS: `brew install python@3.15`. There is one virtual environment for the whole repository (API, `hrms/`, front end and tests), created at the repo root as `.venv`. It is not committed; each person creates their own from `requirements.txt`.
 
 ```bash
-python3 -m venv .venv
+python3.15 -m venv .venv          # any Python 3.10+ also works, e.g. python3.12
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
+
+`fastapi` and `streamlit` are pinned together: Streamlit needs a newer Starlette than the FastAPI release we started with (0.115.6) allows, so upgrade them as a pair. After changing pins, run `pip install -r requirements.txt` and `pytest`.
 
 Fill `API_KEY`, `CHAT_BASE_URL`, and `EMBED_BASE_URL` in `.env` when the course endpoint is issued. The health check does not call the model.
 
@@ -47,14 +50,26 @@ Fill `API_KEY`, `CHAT_BASE_URL`, and `EMBED_BASE_URL` in `.env` when the course 
 
 ```bash
 source .venv/bin/activate
-uvicorn hr_navigator.main:app --app-dir src --host 127.0.0.1 --port 8000
+python -m uvicorn hr_navigator.main:app --app-dir src --host 127.0.0.1 --port 8000
 ```
+
+Run it from this folder with `python -m uvicorn` (not the bare `uvicorn` command) so the `hrms` package is importable. The dummy HR system's endpoints are under `/hrms`; see `hrms/README.md`.
 
 `GET /health` returns:
 
 ```json
 {"status": "ok"}
 ```
+
+## Local LLM stand-in
+
+The course API is rate limited (1 concurrent request, about 60/min, 8192 tokens). To develop without using it, run a local model in LM Studio and start the stand-in, which emulates those limits behind an OpenAI-compatible URL:
+
+```bash
+python -m tools.mock_llm --model llama     # or qwen (not allowed on the office laptop); omit to choose from a menu
+```
+
+Then point `CHAT_BASE_URL`, `CHAT_MODEL` and `API_KEY` at it (the command prints the values; `.env.example` has a commented block). Use it for plumbing only, never for evaluation numbers. Full guide: [`tools/mock_llm/README.md`](tools/mock_llm/README.md).
 
 ## Test
 
