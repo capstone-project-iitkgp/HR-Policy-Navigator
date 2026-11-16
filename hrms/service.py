@@ -8,11 +8,16 @@ Rules for every function here:
   * every call writes one row to audit_log, successful or not.
 """
 
+import contextvars
 import json
 from contextlib import closing
 from datetime import date, datetime
 
 from . import db, rules
+
+# Who is calling: "app" (screens and API) or "agent" (hrms/agent_tools.py sets it for its calls).
+# It is written to every audit row so the agent's actions can be told apart from a person's.
+channel = contextvars.ContextVar("hrms_channel", default="app")
 
 # What a manager may see about a report. HR and the employee themselves see everything.
 LIMITED_FIELDS = ["emp_id", "name", "email", "designation", "department", "manager_id", "join_date"]
@@ -36,9 +41,9 @@ def _one(conn, sql, args=()):
 
 def _audit(conn, actor, action, result, details):
     conn.execute(
-        "INSERT INTO audit_log (ts, actor, role, action, request_id, ok, details) VALUES (?,?,?,?,?,?,?)",
+        "INSERT INTO audit_log (ts, actor, role, action, channel, request_id, ok, details) VALUES (?,?,?,?,?,?,?,?)",
         (datetime.now().isoformat(timespec="seconds"), actor["emp_id"] if actor else "unknown",
-         actor["role"] if actor else None, action,
+         actor["role"] if actor else None, action, channel.get(),
          result.get("request_id") or details.get("request_id"),
          1 if result["ok"] else 0,
          json.dumps(dict(details, error=result.get("error")), default=str)))
@@ -235,6 +240,7 @@ def _check(conn, emp, leave_code, start_date, end_date, half_day, exclude_id=Non
     if end < start:
         fail("bad_date", "The end date is before the start date.")
         return result()
+    start_date, end_date = start.isoformat(), end.isoformat()  # normalised, so stored dates always compare as text
     if start.year != today.year or end.year != today.year:
         fail("wrong_year", "Leave balances are kept per calendar year, so apply for dates within %d." % today.year)
         return result()
@@ -396,7 +402,7 @@ def create_leave_draft(actor_id, leave_code, start_date, end_date, half_day=Fals
         cur = conn.execute(
             "INSERT INTO leave_requests (emp_id, leave_code, start_date, end_date, half_day, days, reason,"
             " status, created_on) VALUES (?,?,?,?,?,?,?,?,?)",
-            (actor["emp_id"], check["leave_code"], start_date, end_date, int(bool(half_day)),
+            (actor["emp_id"], check["leave_code"], check["start_date"], check["end_date"], int(bool(half_day)),
              check["days"], reason, "DRAFT", db.today().isoformat()))
         return _ok(request_id=cur.lastrowid, status="DRAFT", check=check,
                    message="Draft saved. It is not filed until the employee confirms.")
@@ -466,12 +472,15 @@ def modify_request(actor_id, request_id, start_date, end_date, half_day=None, co
         if req["status"] not in BLOCKING:
             return _err("invalid_state", "A %s request cannot be changed." % req["status"])
         half = bool(req["half_day"]) if half_day is None else bool(half_day)
-        if (start_date, end_date, half) == (req["start_date"], req["end_date"], bool(req["half_day"])):
+        parsed_start, parsed_end = _iso(start_date), _iso(end_date)
+        new_start = parsed_start.isoformat() if parsed_start else start_date  # a bad date is reported by _check
+        new_end = parsed_end.isoformat() if parsed_end else end_date
+        if (new_start, new_end, half) == (req["start_date"], req["end_date"], bool(req["half_day"])):
             return _err("no_change", "The dates are the same as before.")
         if (req["status"] == "APPROVED" and actor["policy_org"] == "DEF"
-                and not req["start_date"] <= str(start_date) <= req["end_date"]):
+                and not req["start_date"] <= str(new_start) <= req["end_date"]):
             return _err("modify_rule", "The new start date must lie between the old start and end dates (DEF HR Manual 5.8).")
-        check = _check(conn, actor, req["leave_code"], start_date, end_date, half, exclude_id=req["id"])
+        check = _check(conn, actor, req["leave_code"], new_start, new_end, half, exclude_id=req["id"])
         if not check["valid"]:
             return _invalid(check)
         if req["status"] == "APPROVED" and not confirmed:
@@ -482,7 +491,7 @@ def modify_request(actor_id, request_id, start_date, end_date, half_day=None, co
                      " applied_on = CASE WHEN ? = 'PENDING' THEN ? ELSE applied_on END,"
                      " decided_by = CASE WHEN ? = 'PENDING' THEN NULL ELSE decided_by END,"
                      " decided_on = CASE WHEN ? = 'PENDING' THEN NULL ELSE decided_on END WHERE id = ?",
-                     (start_date, end_date, int(half), check["days"], new_status,
+                     (check["start_date"], check["end_date"], int(half), check["days"], new_status,
                       new_status, db.today().isoformat(), new_status, new_status, req["id"]))
         return _ok(request_id=req["id"], status=new_status, days=check["days"], check=check)
 

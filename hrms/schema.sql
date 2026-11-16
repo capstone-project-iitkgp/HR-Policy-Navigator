@@ -81,6 +81,7 @@ CREATE TABLE audit_log (
     actor       TEXT NOT NULL,
     role        TEXT,
     action      TEXT NOT NULL,
+    channel     TEXT NOT NULL DEFAULT 'app',   -- 'app' (screens, API) or 'agent' (agent tools)
     request_id  INTEGER,
     ok          INTEGER NOT NULL,
     details     TEXT

@@ -82,7 +82,7 @@ with st.sidebar.expander("Demo tools"):
     st.caption("Recent actions (audit log)")
     with closing(db.get_conn()) as conn:
         audit = [dict(r) for r in conn.execute(
-            "SELECT ts, actor, action, request_id, ok FROM audit_log WHERE action IN (%s) ORDER BY id DESC LIMIT 10"
+            "SELECT ts, actor, channel, action, request_id, ok FROM audit_log WHERE action IN (%s) ORDER BY id DESC LIMIT 10"
             % ",".join("?" * len(WRITE_ACTIONS)), WRITE_ACTIONS)]
     st.dataframe(audit, hide_index=True)
 

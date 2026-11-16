@@ -1,5 +1,6 @@
 """The seeded database is complete, consistent and the same every time."""
 
+import sqlite3
 from contextlib import closing
 
 from hrms import db, rules, seed
@@ -14,6 +15,17 @@ def test_database_is_built_automatically_when_missing():
     assert not db.db_path().exists()
     assert rows("SELECT COUNT(*) AS n FROM employees")[0]["n"] == 48
     assert db.db_path().exists()
+
+
+def test_a_database_built_with_an_older_schema_is_rebuilt():
+    rows("SELECT 1")  # builds the DB
+    with closing(sqlite3.connect(str(db.db_path()))) as conn:
+        conn.execute("DELETE FROM employees WHERE emp_id = 'D010'")
+        conn.execute("PRAGMA user_version = %d" % (db.SCHEMA_VERSION - 1))
+        conn.commit()
+    assert rows("SELECT COUNT(*) AS n FROM employees")[0]["n"] == 48
+    with closing(sqlite3.connect(str(db.db_path()))) as conn:
+        assert conn.execute("PRAGMA user_version").fetchone()[0] == db.SCHEMA_VERSION
 
 
 def test_24_employees_per_org_with_one_hr_user_each():

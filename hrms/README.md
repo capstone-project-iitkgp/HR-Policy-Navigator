@@ -5,9 +5,9 @@ A small, **fully synthetic** HR system that the HR Policy Navigator agent calls 
 agent can combine *policy* (from the RAG corpus) with *employee facts* (from a database),
 as the mentor asked on 14 Nov. No real person or company data is used.
 
-Status: **Phases 1-3 done.** Schema, rules, seed data, read functions, request validation, draft / submit /
-cancel / modify, manager decisions, HTTP API, Streamlit demo page, tests. Still to come: agent tool wrappers,
-MCP server, eval items.
+Status: **Phases 1-3 done, Phase 4 half done.** Schema, rules, seed data, read functions, request validation,
+draft / submit / cancel / modify, manager decisions, HTTP API, Streamlit demo page, agent tool wrappers, tests.
+Still to come: MCP server, eval items.
 
 ## Quickstart
 
@@ -82,6 +82,40 @@ half-day rules, minimum and maximum days, advance notice, back-dating limit, no 
 balance (commuted leave counts double), no overlap with another active request, DEF sandwich rule,
 holidays and weekly offs not counted (maternity counts calendar days), supporting documents.
 
+## Agent tools (`hrms/agent_tools.py`)
+
+What the planner / executor gets. Give the model `tool_schemas()` (OpenAI function-calling format, about
+1,050 tokens) and run each call it makes with `run_tool(actor_id, name, arguments)`. `actor_id` is the
+logged-in employee from the app session; `arguments` may be a dict or the model's JSON string.
+
+```python
+from hrms.agent_tools import tool_schemas, run_tool
+run_tool("D010", "get_leave_balance", '{"leave_code": "EL"}')
+# {"ok": True, "as_of": "2026-11-16", "balances": [{"leave_code": "EL", ..., "available": 6.0}]}
+```
+
+| Tool | Purpose |
+|---|---|
+| `get_my_profile` | Organisation, category, join date, status, and today's date |
+| `get_leave_balance(leave_code?)` | Own balances this year |
+| `get_holidays(holiday_type?)` | Own organisation's calendar |
+| `get_my_manager` | Who approves the employee's leave |
+| `list_my_requests(status?)` | Own requests, newest first, at most 10 |
+| `check_leave_request(leave_code, start_date, end_date, half_day?)` | Would this be allowed? Days, balance after, warnings, document needed, approver |
+| `create_leave_draft(..., reason?)` | Save a **draft** only; the result tells the agent the employee must confirm in the app |
+| `cancel_leave_request(request_id)` | Discard a draft; filed or approved requests answer `confirmation_required` |
+
+Guarantees (each has a test):
+- No tool takes an employee id, and extra arguments such as `emp_id` or `confirmed` are rejected before they
+  reach the HR system, so the model cannot change whose data it acts on or confirm for the employee.
+- There is no tool to submit, change an approved request, approve, reject or list another person's data.
+- Bad input never raises: the agent gets `{"ok": False, "error": "bad_arguments", "problems": [...]}` (or
+  `unknown_tool`, `tool_failed`) and can correct itself. Results are trimmed to keep the 8,192-token window free.
+- Every call is written to the audit log with `channel = "agent"` (screens and the API use `"app"`).
+
+Prompt hint for the agent: tell it today's date comes from `get_my_profile`, that it must never ask for an
+employee id, and that after `create_leave_draft` it should tell the employee to confirm in the app.
+
 ## Demo page (`hrms/demo_app.py`)
 
 ```bash
@@ -109,6 +143,7 @@ balance; D015 is serving notice. Press "Reset demo data" before every rehearsal.
 | `service.py` | Functions the tools call. Every call checks who is asking and writes an audit row. |
 | `api.py` | HTTP endpoints under `/hrms`, mounted by `src/hr_navigator/main.py`. |
 | `demo_app.py` | Streamlit demo page (employee screens and manager inbox). |
+| `agent_tools.py` | The tools the agent may call: validated inputs, trimmed outputs, audit channel. |
 | `seed_data/*.csv` | The data (48 employees, usage, requests, 2026 holidays). Edit these by hand if needed. |
 | `seed_data/generate_seed_data.py` | One-off generator that produced `employees.csv` and `leave_usage.csv`. Re-running overwrites them. |
 | `tests/` | pytest tests (rules, seed integrity, access rules, audit). |
@@ -123,7 +158,9 @@ balance; D015 is serving notice. Press "Reset demo data" before every rehearsal.
   same whether the record exists or not.
 - **Structured results.** Functions return `{"ok": True, ...}` or `{"ok": False, "error": code, "message": text}`
   and never raise to the caller.
-- **Audit trail.** One `audit_log` row per call, including denied calls.
+- **Audit trail.** One `audit_log` row per call, including denied calls, tagged `app` or `agent`.
+- **Schema version.** `db.SCHEMA_VERSION` is stored in the DB file. A DB built with an older version is rebuilt
+  from the seed files the next time it is opened, so teammates never need to reset by hand after a schema change.
 - **Fixed "today".** `HRMS_TODAY` (default `2026-11-16`) drives accrual and, later, notice and
   back-dating rules, so demos and tests are repeatable. Balances are computed at seed time,
   so rebuild the DB after changing it.

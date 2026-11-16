@@ -35,6 +35,7 @@ def build(path=None) -> dict:
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     conn.executescript((HERE / "schema.sql").read_text())
+    conn.execute("PRAGMA user_version = %d" % db.SCHEMA_VERSION)
 
     # employees (managers appear after their reports, so check foreign keys at the end)
     employees = _read("employees.csv")
