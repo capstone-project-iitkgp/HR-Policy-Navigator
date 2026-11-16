@@ -375,6 +375,18 @@ def check_leave_request(actor_id, leave_code, start_date, end_date, half_day=Fal
         "leave_code": leave_code, "start_date": start_date, "end_date": end_date, "half_day": half_day}, body)
 
 
+def preview_request(actor_id, request_id):
+    """Re-check one of the actor's own saved requests (it does not clash with itself). Saves nothing."""
+    def body(conn, actor):
+        req, error = _own_request(conn, actor, request_id)
+        if error:
+            return error
+        return _ok(request_id=req["id"], status=req["status"], **_check(
+            conn, actor, req["leave_code"], req["start_date"], req["end_date"], req["half_day"], exclude_id=req["id"]))
+
+    return _run("preview_request", actor_id, {"request_id": request_id}, body)
+
+
 def create_leave_draft(actor_id, leave_code, start_date, end_date, half_day=False, reason=None):
     """Save a DRAFT request for the actor if it passes the checks. Nothing is filed yet."""
     def body(conn, actor):

@@ -55,6 +55,14 @@ def test_a_second_draft_for_the_same_dates_is_refused():
     assert not r["ok"] and r["errors"][0]["code"] == "overlap"
 
 
+def test_preview_rechecks_a_saved_request_without_clashing_with_itself():
+    rid = draft()
+    preview = service.preview_request("D010", rid)
+    assert preview["ok"] and preview["valid"] and preview["status"] == "DRAFT" and preview["days"] == 1
+    assert service.preview_request("D006", rid)["error"] == "not_found"
+    assert request("D010", rid)["status"] == "DRAFT"
+
+
 # --- submit --------------------------------------------------------------
 def test_submit_needs_the_employees_confirmation():
     rid = draft()

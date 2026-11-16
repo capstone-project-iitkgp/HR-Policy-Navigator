@@ -41,6 +41,8 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
+`fastapi` and `streamlit` are pinned together: Streamlit needs a newer Starlette than the FastAPI release we started with (0.115.6) allows, so upgrade them as a pair. After changing pins, run `pip install -r requirements.txt` and `pytest`.
+
 Fill `API_KEY`, `CHAT_BASE_URL`, and `EMBED_BASE_URL` in `.env` when the course endpoint is issued. The health check does not call the model.
 
 ## Run

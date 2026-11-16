@@ -5,9 +5,9 @@ A small, **fully synthetic** HR system that the HR Policy Navigator agent calls 
 agent can combine *policy* (from the RAG corpus) with *employee facts* (from a database),
 as the mentor asked on 14 Nov. No real person or company data is used.
 
-Status: **Phases 1-2 done, Phase 3 in progress.** Done: schema, rules, seed data, read functions, request
-validation, draft / submit / cancel / modify, manager decisions, HTTP API, tests. Still to come: Streamlit
-demo screens, agent tool wrappers, MCP server, eval items.
+Status: **Phases 1-3 done.** Schema, rules, seed data, read functions, request validation, draft / submit /
+cancel / modify, manager decisions, HTTP API, Streamlit demo page, tests. Still to come: agent tool wrappers,
+MCP server, eval items.
 
 ## Quickstart
 
@@ -44,6 +44,7 @@ confirmation in the app; the agent tools will never pass it.
 | `submit_request(actor, id, confirmed, doc_attached)` | DRAFT or SENT_BACK to PENDING; the days move into `pending` |
 | `cancel_request(actor, id, confirmed)` | Drafts cancel freely; PENDING and APPROVED need `confirmed`, APPROVED only until its end date |
 | `modify_request(actor, id, start, end, half_day, confirmed)` | Change dates and re-check. APPROVED goes back to PENDING (needs `confirmed`; at DEF the new start must be inside the old dates) |
+| `preview_request(actor, id)` | Re-check a saved request of your own (it ignores itself when looking for overlaps). Saves nothing |
 | `list_pending_approvals(actor)` | The actor's inbox: pending requests they decide, with the employee's balance |
 | `decide_request(actor, id, decision, note)` | `APPROVE`, `REJECT` or `SEND_BACK` a PENDING request. Only the approver (the reporting manager, or HR for someone with no manager); reject and send back need a note |
 
@@ -81,6 +82,22 @@ half-day rules, minimum and maximum days, advance notice, back-dating limit, no 
 balance (commuted leave counts double), no overlap with another active request, DEF sandwich rule,
 holidays and weekly offs not counted (maternity counts calendar days), supporting documents.
 
+## Demo page (`hrms/demo_app.py`)
+
+```bash
+python -m streamlit run hrms/demo_app.py        # from Code/, with the venv active
+```
+
+Pick anyone in "Log in as" (the demo login). Tabs: **My balances**, **Apply for leave** (check against policy,
+save a draft), **My requests** (confirm and submit, withdraw, cancel approved leave, change dates) and **Holidays**.
+**Approvals** is the manager's inbox (approve, reject, send back; a note is needed to reject or send back).
+The sidebar shows the person, a notice-period banner, a "Reset demo data" button and the recent audit log.
+The page calls `hrms/service.py` directly, and only its Confirm buttons pass `confirmed=True`.
+
+Suggested 2-minute demo: D010 checks a Friday-to-Monday casual leave (sandwich warning), saves it, confirms;
+switch to D003 and approve it; switch back to D010 and see the balance move; D020 tries casual leave with zero
+balance; D015 is serving notice. Press "Reset demo data" before every rehearsal.
+
 ## Folder map
 
 | File | Purpose |
@@ -90,6 +107,8 @@ holidays and weekly offs not counted (maternity counts calendar days), supportin
 | `db.py` | Connection helper, DB path, the fixed "today". |
 | `seed.py` | Builds the DB from `schema.sql`, `rules.py` and the CSVs. |
 | `service.py` | Functions the tools call. Every call checks who is asking and writes an audit row. |
+| `api.py` | HTTP endpoints under `/hrms`, mounted by `src/hr_navigator/main.py`. |
+| `demo_app.py` | Streamlit demo page (employee screens and manager inbox). |
 | `seed_data/*.csv` | The data (48 employees, usage, requests, 2026 holidays). Edit these by hand if needed. |
 | `seed_data/generate_seed_data.py` | One-off generator that produced `employees.csv` and `leave_usage.csv`. Re-running overwrites them. |
 | `tests/` | pytest tests (rules, seed integrity, access rules, audit). |
