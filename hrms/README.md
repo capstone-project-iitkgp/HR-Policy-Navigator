@@ -5,9 +5,9 @@ A small, **fully synthetic** HR system that the HR Policy Navigator agent calls 
 agent can combine *policy* (from the RAG corpus) with *employee facts* (from a database),
 as the mentor asked on 14 Nov. No real person or company data is used.
 
-Status: **Phases 1-3 done, Phase 4 half done.** Schema, rules, seed data, read functions, request validation,
-draft / submit / cancel / modify, manager decisions, HTTP API, Streamlit demo page, agent tool wrappers, tests.
-Still to come: MCP server, eval items.
+Status: **Phases 1-4 done.** Schema, rules, seed data, read functions, request validation, draft / submit /
+cancel / modify, manager decisions, HTTP API, Streamlit demo page, agent tool wrappers, MCP server, tests.
+Still to come: eval items, data card, AI-use disclosure.
 
 ## Quickstart
 
@@ -116,6 +116,33 @@ Guarantees (each has a test):
 Prompt hint for the agent: tell it today's date comes from `get_my_profile`, that it must never ask for an
 employee id, and that after `create_leave_draft` it should tell the employee to confirm in the app.
 
+## MCP server (`hrms/mcp_server.py`)
+
+The same 8 tools over the Model Context Protocol (stdio), so any MCP client can use them: the capstone agent,
+the MCP Inspector, or a desktop assistant for the live demo. It is a thin wrapper: every call goes through
+`agent_tools.run_tool`, so the argument checks, the trimmed results and the `agent` audit channel are identical,
+and the server lists exactly the schemas the in-process tools use.
+
+```bash
+HRMS_ACTING_EMPLOYEE=D010 python -m hrms.mcp_server       # from Code/, with the venv active
+```
+
+The employee the tools act as is fixed at start-up by `HRMS_ACTING_EMPLOYEE` (like a login), never by a
+tool argument. The server exits with a message if it is missing or not an employee. Client configuration
+(adjust the paths):
+
+```json
+{"mcpServers": {"hrms": {
+  "command": "/Users/you/.../Code/.venv/bin/python",
+  "args": ["-m", "hrms.mcp_server"],
+  "cwd": "/Users/you/.../Code",
+  "env": {"HRMS_ACTING_EMPLOYEE": "D010"}}}}
+```
+
+It uses the MCP Python SDK **2.x** (`mcp==2.3.0`, low-level `Server`); most examples online are for 1.x
+(`FastMCP`) and will not match. Tool failures come back as results with `is_error` set, carrying the same
+`{"ok": False, "error": ..., "message": ...}` body, so the model can correct itself.
+
 ## Demo page (`hrms/demo_app.py`)
 
 ```bash
@@ -144,6 +171,7 @@ balance; D015 is serving notice. Press "Reset demo data" before every rehearsal.
 | `api.py` | HTTP endpoints under `/hrms`, mounted by `src/hr_navigator/main.py`. |
 | `demo_app.py` | Streamlit demo page (employee screens and manager inbox). |
 | `agent_tools.py` | The tools the agent may call: validated inputs, trimmed outputs, audit channel. |
+| `mcp_server.py` | The same tools as an MCP server (stdio). |
 | `seed_data/*.csv` | The data (48 employees, usage, requests, 2026 holidays). Edit these by hand if needed. |
 | `seed_data/generate_seed_data.py` | One-off generator that produced `employees.csv` and `leave_usage.csv`. Re-running overwrites them. |
 | `tests/` | pytest tests (rules, seed integrity, access rules, audit). |
