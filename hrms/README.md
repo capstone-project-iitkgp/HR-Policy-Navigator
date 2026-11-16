@@ -5,9 +5,11 @@ A small, **fully synthetic** HR system that the HR Policy Navigator agent calls 
 agent can combine *policy* (from the RAG corpus) with *employee facts* (from a database),
 as the mentor asked on 14 Nov. No real person or company data is used.
 
-Status: **Phases 1-4 done.** Schema, rules, seed data, read functions, request validation, draft / submit /
-cancel / modify, manager decisions, HTTP API, Streamlit demo page, agent tool wrappers, MCP server, tests.
-Still to come: eval items, data card, AI-use disclosure.
+Status: **All planned phases done** (draft versions): schema, rules, seed data, read functions, request
+validation, draft / submit / cancel / modify, manager decisions, HTTP API, Streamlit demo page, agent tool
+wrappers, MCP server, 20 evaluation items and tests. Design decisions, data caveats and the AI-use disclosure
+are in `docs/decisions/hrms_design.md`. Still needed from a human: review of the evaluation items and of the
+policy readings, and a check of the holiday dates.
 
 ## Quickstart
 
@@ -158,6 +160,12 @@ The page calls `hrms/service.py` directly, and only its Confirm buttons pass `co
 Suggested 2-minute demo: D010 checks a Friday-to-Monday casual leave (sandwich warning), saves it, confirms;
 switch to D003 and approve it; switch back to D010 and see the balance move; D020 tries casual leave with zero
 balance; D015 is serving notice. Press "Reset demo data" before every rehearsal.
+
+## Evaluation items (`data/eval/hrms_ext_v1.jsonl`)
+
+20 draft items for the HRMS tools, separate from the frozen `eval_v1` set. `hrms/tests/test_eval_items.py` runs
+each item's `verify` steps against the seeded database and replays its ideal tool calls, so the gold numbers
+are checked by the test suite, not trusted. Items are `DRAFT` until a human sets `reviewer` and `review_date`.
 
 ## Folder map
 
