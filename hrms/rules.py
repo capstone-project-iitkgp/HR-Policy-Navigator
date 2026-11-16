@@ -11,7 +11,7 @@ leave_types table and service.py reads from it.
 """
 
 import re
-from datetime import date
+from datetime import date, timedelta
 
 # --- employee categories -------------------------------------------------
 DEF_CATEGORIES = ["FT_PERMANENT", "FT_PROBATION", "FT_CONTRACT", "PART_TIME"]
@@ -51,7 +51,7 @@ LEAVES = {
             name="Earned Leave", annual=15, credit="monthly", carry_cap=150,
             categories=["FT_PERMANENT"], max_stretch=30, min_notice=15,
             max_backdate=0, half_day=False, doc_rule=None, pay_factor=1,
-            ref="DEF HR Manual 5.2.3, 5.3",
+            min_days=1, ref="DEF HR Manual 5.2.3, 5.3, 5.4.4",
         ),
         "COFF": dict(
             name="Compensatory Off", annual=0, credit="earned", carry_cap=5,
@@ -67,7 +67,8 @@ LEAVES = {
             categories=["FT_PERMANENT"], gender="F", max_children=1,
             max_stretch=90, min_notice=0, max_backdate=15, half_day=False,
             doc_rule="Medical certificate mandatory", pay_factor=1,
-            ref="DEF HR Manual 5.2.5, 5.4.5",
+            min_days=15, calendar_days=True, doc_always=True,
+            ref="DEF HR Manual 5.2.5, 5.4.6",
             note="Fewer than 2 surviving children and 80 days worked in the 12 months before delivery.",
         ),
         "PAT": dict(
@@ -75,6 +76,7 @@ LEAVES = {
             categories=["FT_PERMANENT"], gender="M", max_children=1,
             max_stretch=10, min_notice=0, max_backdate=15, half_day=False,
             doc_rule="Medical certificate mandatory", pay_factor=1,
+            min_days=1, doc_always=True,
             ref="DEF HR Manual 5.2.6, 5.4.9",
         ),
     },
@@ -105,7 +107,7 @@ LEAVES = {
             categories=BLDEDU_PERMANENT, max_stretch=None, min_notice=7,
             max_backdate=0, half_day=False,
             doc_rule="Medical certificate required", pay_factor=2,
-            ref="BLDEDU HR Policy 5.C, table",
+            doc_always=True, ref="BLDEDU HR Policy 5.C, table",
             note="CONFLICT: 5.C says 20 days per completed year; the table says 10. Table value used. "
                  "Debited at twice the days taken.",
         ),
@@ -114,7 +116,7 @@ LEAVES = {
             categories=["TEACHING"], max_stretch=15, min_notice=0,
             max_backdate=0, half_day=False,
             doc_rule="Attendance certificate", pay_factor=1,
-            ref="BLDEDU HR Policy 5.D, 9",
+            doc_always=True, ref="BLDEDU HR Policy 5.D, 9",
         ),
         "BEREAVEMENT": dict(
             name="Bereavement Leave", annual=3, credit="event", carry_cap=0,
@@ -128,7 +130,7 @@ LEAVES = {
             categories=BLDEDU_PERMANENT, gender="F", max_children=1,
             max_stretch=182, min_notice=70, max_backdate=0, half_day=False,
             doc_rule="Doctor's certificate confirming pregnancy", pay_factor=1,
-            ref="BLDEDU HR Policy 6",
+            calendar_days=True, doc_always=True, ref="BLDEDU HR Policy 6",
             note="26 weeks. UNVERIFIED reading of 'only up to two existing child' as fewer than 2 existing children.",
         ),
     },
@@ -228,3 +230,74 @@ def accrued_to_date(emp, code, today):
                 total += annual / 12 * months
         return round(total, 2)
     raise ValueError("unknown credit kind: %s" % kind)
+
+
+# --- applying for leave --------------------------------------------------
+def min_days(emp, code):
+    """Smallest request allowed: the rule's own minimum, else half a day (a full day if no half days)."""
+    rule = LEAVES[emp["policy_org"]][code]
+    if "min_days" in rule:
+        return float(rule["min_days"])
+    return 0.5 if rule.get("half_day") else 1.0
+
+
+def max_stretch(emp, code):
+    """Longest request allowed in one go, or None for no limit."""
+    value = _pick(LEAVES[emp["policy_org"]][code]["max_stretch"], emp["category"])
+    return None if value is None else float(value)
+
+
+def weekly_off(emp, day):
+    """Sunday is always off; Saturday is off too on a 5-day work week (DEF 4.1)."""
+    if day.weekday() == 6:
+        return True
+    return day.weekday() == 5 and float(emp["work_week_days"]) <= 5
+
+
+def count_leave_days(emp, code, start, end, half_day, holiday_dates):
+    """Work out how many leave days a request uses.
+
+    * Weekly offs and holidays inside the range are not counted, except for
+      maternity leave, which counts every calendar day (DEF 5.2.5).
+    * DEF sandwich rule (5.4.1.5): leave on a working Friday and the working Monday
+      after it also counts Saturday and Sunday.
+    * A half day is 0.5 and only valid for a single working day.
+    `holiday_dates` is a set of date objects (national / public / compulsory holidays).
+    """
+    start, end = _d(start), _d(end)
+    rule = LEAVES[emp["policy_org"]][code]
+    counted, skipped = [], []
+    day = start
+    while day <= end:
+        if rule.get("calendar_days"):
+            counted.append(day)
+        elif day in holiday_dates:
+            skipped.append((day, "holiday"))
+        elif weekly_off(emp, day):
+            skipped.append((day, "weekly off"))
+        else:
+            counted.append(day)
+        day += timedelta(days=1)
+    sandwiched = []
+    if emp["policy_org"] == "DEF" and not rule.get("calendar_days"):
+        for friday in counted:
+            if friday.weekday() == 4 and friday + timedelta(days=3) in counted:
+                for off_day in (friday + timedelta(days=1), friday + timedelta(days=2)):
+                    if (off_day, "weekly off") in skipped:
+                        sandwiched.append(off_day)
+    days = float(len(counted) + len(sandwiched))
+    if half_day:
+        days = 0.5 if counted else 0.0
+    return dict(days=days, counted=counted, sandwiched=sandwiched,
+                skipped=[(d.isoformat(), why) for d, why in skipped])
+
+
+def needs_document(emp, code, used_so_far):
+    """(True, note) when a supporting document must be attached before submitting."""
+    rule = LEAVES[emp["policy_org"]][code]
+    if rule.get("doc_always"):
+        return True, rule["doc_rule"]
+    if emp["policy_org"] == "DEF" and code == "SL" and used_so_far >= 2:
+        # DEF 5.4.3: after two full sick days this year, a medical certificate is mandatory
+        return True, "Medical certificate required (2 or more sick days already taken this year)."
+    return False, rule.get("doc_rule") or ""

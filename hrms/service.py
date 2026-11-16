@@ -10,7 +10,7 @@ Rules for every function here:
 
 import json
 from contextlib import closing
-from datetime import datetime
+from datetime import date, datetime
 
 from . import db, rules
 
@@ -38,7 +38,8 @@ def _audit(conn, actor, action, result, details):
     conn.execute(
         "INSERT INTO audit_log (ts, actor, role, action, request_id, ok, details) VALUES (?,?,?,?,?,?,?)",
         (datetime.now().isoformat(timespec="seconds"), actor["emp_id"] if actor else "unknown",
-         actor["role"] if actor else None, action, result.get("request_id"),
+         actor["role"] if actor else None, action,
+         result.get("request_id") or details.get("request_id"),
          1 if result["ok"] else 0,
          json.dumps(dict(details, error=result.get("error")), default=str)))
 
@@ -169,3 +170,309 @@ def list_requests(actor_id, emp_id=None, status=None):
         return _ok(emp_id=target["emp_id"], requests=rows)
 
     return _run("list_requests", actor_id, {"emp_id": emp_id, "status": status}, body)
+
+
+# --- applying for leave --------------------------------------------------
+# Request life cycle (who may move a request, and what happens to the balance):
+#
+#   DRAFT --submit (employee confirms)--> PENDING --approve (manager)--> APPROVED
+#     |                                      |  \--reject---------------> REJECTED
+#     |                                      \----send back-----------> SENT_BACK --submit--> PENDING
+#     \--cancel--> CANCELLED   (PENDING and APPROVED can be cancelled too, APPROVED only until its end date)
+#
+# Only the employee's own confirmation (`confirmed=True`) moves a request out of DRAFT,
+# and the agent tools never pass it, so the agent can prepare a request but never file one.
+# Balance: PENDING days sit in `pending`, APPROVED days in `used`, anything else holds nothing.
+# (approve / reject / send back are added with the manager screens.)
+BLOCKING = ("DRAFT", "PENDING", "APPROVED", "SENT_BACK")  # statuses that occupy their dates
+
+
+def _iso(value):
+    """Parse YYYY-MM-DD, or return None."""
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
+def _approver(conn, emp):
+    """Who decides this employee's leave: the reporting manager, else HR of the same organisation."""
+    row = None
+    if emp["manager_id"]:
+        row = _one(conn, "SELECT emp_id, name, designation FROM employees WHERE emp_id = ?",
+                   (emp["manager_id"],))
+    if row is None:
+        row = _one(conn, "SELECT emp_id, name, designation FROM employees "
+                         "WHERE role = 'hr' AND policy_org = ? ORDER BY emp_id", (emp["policy_org"],))
+    return row
+
+
+def _check(conn, emp, leave_code, start_date, end_date, half_day, exclude_id=None):
+    """Test a leave request against the policy. Returns a dict with `valid`, `errors`, `warnings`
+    and the numbers behind them. `exclude_id` is a request being edited, so it does not clash with itself."""
+    today = db.today()
+    leave = str(leave_code or "").upper()
+    errors, warnings = [], []
+
+    def fail(kind, message):
+        errors.append({"code": kind, "message": message})
+
+    def result(**extra):
+        out = dict(valid=not errors, errors=errors, warnings=warnings, leave_code=leave,
+                   start_date=str(start_date), end_date=str(end_date), half_day=bool(half_day))
+        out.update(extra)
+        return out
+
+    ok, reason = rules.eligible(emp, leave)
+    if not ok:
+        fail("not_eligible", reason)
+        return result()
+    rule = rules.LEAVES[emp["policy_org"]][leave]
+    start, end = _iso(start_date), _iso(end_date)
+    if start is None or end is None:
+        fail("bad_date", "Dates must be written as YYYY-MM-DD.")
+        return result()
+    if end < start:
+        fail("bad_date", "The end date is before the start date.")
+        return result()
+    if start.year != today.year or end.year != today.year:
+        fail("wrong_year", "Leave balances are kept per calendar year, so apply for dates within %d." % today.year)
+        return result()
+    if emp["status"] == "notice":
+        fail("on_notice", "No leave can be applied for or granted during the notice period "
+                          "(DEF HR Manual 5.6; BLDEDU HR Policy 5.G).")
+        return result()
+    if half_day:
+        if not rule.get("half_day"):
+            fail("half_day_not_allowed", "%s cannot be taken as a half day." % rule["name"])
+            return result()
+        if start != end:
+            fail("half_day_range", "A half day can only be a single day.")
+            return result()
+
+    holidays = {date.fromisoformat(r["date"]) for r in conn.execute(
+        "SELECT date FROM holidays WHERE org = ? AND type IN ('national', 'public', 'compulsory')",
+        (emp["policy_org"],))}
+    counted = rules.count_leave_days(emp, leave, start, end, bool(half_day), holidays)
+    days = counted["days"]
+    if days == 0:
+        fail("no_working_days", "Every date falls on a weekly off or a holiday, so there is no leave to apply for.")
+        return result(days=0.0, skipped=counted["skipped"])
+
+    lowest, longest = rules.min_days(emp, leave), rules.max_stretch(emp, leave)
+    if days < lowest:
+        fail("below_minimum", "The minimum for %s is %g days; this request uses %g." % (rule["name"], lowest, days))
+    if longest is not None and days > longest:
+        fail("above_maximum", "The maximum for %s at a stretch is %g days; this request uses %g." % (
+            rule["name"], longest, days))
+
+    lead = (start - today).days  # days from today until the leave starts (negative = back-dated)
+    if rule.get("no_advance") and lead > 0:
+        fail("no_advance", "%s cannot be applied for in advance." % rule["name"])
+    if lead < 0 and -lead > rule["max_backdate"]:
+        if rule["max_backdate"] == 0:
+            fail("backdated", "Back-dated applications are not allowed for %s." % rule["name"])
+        else:
+            fail("backdated", "%s must be applied for within %d days of the start date; this started %d days ago." % (
+                rule["name"], rule["max_backdate"], -lead))
+    if 0 <= lead < rule["min_notice"]:
+        fail("short_notice", "%s must be applied for at least %d days in advance; this starts in %d days." % (
+            rule["name"], rule["min_notice"], lead))
+
+    bal = _one(conn, "SELECT * FROM leave_balances WHERE emp_id = ? AND leave_code = ? AND year = ?",
+               (emp["emp_id"], leave, today.year))
+    available = (bal["entitled"] + bal["carried_forward"] - bal["used"] - bal["pending"]) if bal else 0.0
+    if exclude_id:  # the request being edited gives back what it was holding
+        own = _one(conn, "SELECT status, days FROM leave_requests WHERE id = ?", (exclude_id,))
+        if own and own["status"] in ("PENDING", "APPROVED"):
+            available += own["days"] * rule["pay_factor"]
+    debit = days * rule["pay_factor"]
+    if debit > available + 1e-9:
+        message = "You have %g days of %s available but this request needs %g." % (
+            round(available, 2), rule["name"], debit)
+        if emp["policy_org"] == "BLDEDU":
+            message += " Leave Without Pay can be requested instead (BLDEDU 5.G.7); this system does not handle it."
+        fail("insufficient_balance", message)
+
+    clash = _one(conn, "SELECT id, leave_code, start_date, end_date, status FROM leave_requests "
+                       "WHERE emp_id = ? AND status IN (%s) AND start_date <= ? AND end_date >= ? AND id != ? LIMIT 1"
+                       % ",".join("?" * len(BLOCKING)),
+                 [emp["emp_id"]] + list(BLOCKING) + [end.isoformat(), start.isoformat(), exclude_id or 0])
+    if clash:
+        fail("overlap", "These dates overlap request #%d (%s, %s to %s, %s)." % (
+            clash["id"], clash["leave_code"], clash["start_date"], clash["end_date"], clash["status"]))
+
+    if counted["sandwiched"]:
+        warnings.append({"code": "sandwich", "message": (
+            "You are away on a working Friday and the Monday after, so Saturday and Sunday also count "
+            "as leave (+%d days). DEF HR Manual 5.4.1." % len(counted["sandwiched"]))})
+    if emp["policy_org"] == "DEF" and days > 7 and lead < 15:
+        warnings.append({"code": "long_leave", "message": (
+            "Leave of more than 7 days should be planned with your manager at least 15 days ahead (DEF 5.4.1).")})
+    if emp["policy_org"] == "BLDEDU" and days >= 5:
+        warnings.append({"code": "long_leave", "message": (
+            "Leave of 5 or more continuous working days should be planned well in advance (BLDEDU 5.G).")})
+    if rule["pay_factor"] != 1:
+        warnings.append({"code": "debit_factor", "message": (
+            "%s is debited at %g times the days taken." % (rule["name"], rule["pay_factor"]))})
+
+    needs_doc, doc_note = rules.needs_document(emp, leave, bal["used"] if bal else 0)
+    return result(
+        leave_name=rule["name"], days=days, debit=debit, balance_before=round(available, 2),
+        balance_after=round(available - debit, 2), needs_doc=needs_doc, doc_note=doc_note,
+        approver=_approver(conn, emp), skipped=counted["skipped"],
+        sandwiched=[d.isoformat() for d in counted["sandwiched"]], rule_refs=[rule["ref"]])
+
+
+def _own_request(conn, actor, request_id):
+    """The actor's own request, or an error. A missing request and someone else's look the same."""
+    req = _one(conn, "SELECT * FROM leave_requests WHERE id = ? AND emp_id = ?", (request_id, actor["emp_id"]))
+    if req is None:
+        return None, _err("not_found", "No leave request #%s found for you." % request_id)
+    return req, None
+
+
+def _reserved(status, amount):
+    """(used, pending) days a request holds in its balance, given its status."""
+    if status == "APPROVED":
+        return amount, 0.0
+    if status == "PENDING":
+        return 0.0, amount
+    return 0.0, 0.0
+
+
+def _rebook(conn, org, req, new_status, new_days):
+    """Update the balance for a request moving to `new_status` with `new_days` days."""
+    factor = rules.LEAVES[org][req["leave_code"]]["pay_factor"]
+    old_used, old_pending = _reserved(req["status"], req["days"] * factor)
+    new_used, new_pending = _reserved(new_status, new_days * factor)
+    conn.execute(
+        "UPDATE leave_balances SET used = ROUND(used + ?, 2), pending = ROUND(pending + ?, 2) "
+        "WHERE emp_id = ? AND leave_code = ? AND year = ?",
+        (new_used - old_used, new_pending - old_pending, req["emp_id"], req["leave_code"],
+         int(req["start_date"][:4])))
+
+
+def _invalid(check):
+    out = _err("invalid_request", "The request breaks the leave policy: " + " ".join(
+        e["message"] for e in check["errors"]))
+    out["errors"] = check["errors"]
+    return out
+
+
+def _needs_confirmation(message, preview):
+    out = _err("confirmation_required", message)
+    out["preview"] = preview
+    return out
+
+
+def check_leave_request(actor_id, leave_code, start_date, end_date, half_day=False):
+    """Test a request for the actor without saving anything. `valid` says whether it would be accepted."""
+    def body(conn, actor):
+        return _ok(**_check(conn, actor, leave_code, start_date, end_date, half_day))
+
+    return _run("check_leave_request", actor_id, {
+        "leave_code": leave_code, "start_date": start_date, "end_date": end_date, "half_day": half_day}, body)
+
+
+def create_leave_draft(actor_id, leave_code, start_date, end_date, half_day=False, reason=None):
+    """Save a DRAFT request for the actor if it passes the checks. Nothing is filed yet."""
+    def body(conn, actor):
+        check = _check(conn, actor, leave_code, start_date, end_date, half_day)
+        if not check["valid"]:
+            return _invalid(check)
+        cur = conn.execute(
+            "INSERT INTO leave_requests (emp_id, leave_code, start_date, end_date, half_day, days, reason,"
+            " status, created_on) VALUES (?,?,?,?,?,?,?,?,?)",
+            (actor["emp_id"], check["leave_code"], start_date, end_date, int(bool(half_day)),
+             check["days"], reason, "DRAFT", db.today().isoformat()))
+        return _ok(request_id=cur.lastrowid, status="DRAFT", check=check,
+                   message="Draft saved. It is not filed until the employee confirms.")
+
+    return _run("create_leave_draft", actor_id, {
+        "leave_code": leave_code, "start_date": start_date, "end_date": end_date,
+        "half_day": half_day}, body)
+
+
+def submit_request(actor_id, request_id, confirmed=False, doc_attached=False):
+    """File a DRAFT (or SENT_BACK) request with the approver. Needs `confirmed=True`, which only
+    the employee's own confirmation in the app sets, and the document when one is required."""
+    def body(conn, actor):
+        req, error = _own_request(conn, actor, request_id)
+        if error:
+            return error
+        if req["status"] not in ("DRAFT", "SENT_BACK"):
+            return _err("invalid_state", "Only a draft or a request sent back can be submitted; this one is %s." % req["status"])
+        check = _check(conn, actor, req["leave_code"], req["start_date"], req["end_date"],
+                       req["half_day"], exclude_id=req["id"])
+        if not check["valid"]:
+            return _invalid(check)
+        if not confirmed:
+            return _needs_confirmation("The employee must confirm before this request is filed.", check)
+        if check["needs_doc"] and not doc_attached:
+            return _err("document_required", check["doc_note"])
+        _rebook(conn, actor["policy_org"], req, "PENDING", check["days"])
+        conn.execute("UPDATE leave_requests SET status = 'PENDING', days = ?, applied_on = ?, doc_attached = ?,"
+                     " decided_by = NULL, decided_on = NULL, decision_note = NULL WHERE id = ?",
+                     (check["days"], db.today().isoformat(), int(bool(doc_attached)), req["id"]))
+        return _ok(request_id=req["id"], status="PENDING", days=check["days"], approver=check["approver"])
+
+    return _run("submit_request", actor_id, {
+        "request_id": request_id, "confirmed": confirmed, "doc_attached": doc_attached}, body)
+
+
+def cancel_request(actor_id, request_id, confirmed=False):
+    """Cancel the actor's own request. A draft or sent-back request cancels freely; a pending or
+    approved one needs `confirmed=True`, and an approved one only until its end date (DEF 5.7)."""
+    def body(conn, actor):
+        req, error = _own_request(conn, actor, request_id)
+        if error:
+            return error
+        if req["status"] not in BLOCKING:
+            return _err("invalid_state", "A %s request cannot be cancelled." % req["status"])
+        if req["status"] == "APPROVED" and db.today().isoformat() > req["end_date"]:
+            return _err("too_late", "Approved leave can only be cancelled until its end date (%s)." % req["end_date"])
+        if req["status"] in ("PENDING", "APPROVED") and not confirmed:
+            return _needs_confirmation("The employee must confirm before a %s request is cancelled." % req["status"].lower(), req)
+        _rebook(conn, actor["policy_org"], req, "CANCELLED", req["days"])
+        conn.execute("UPDATE leave_requests SET status = 'CANCELLED', decided_by = ?, decided_on = ?,"
+                     " decision_note = 'Cancelled by employee' WHERE id = ?",
+                     (actor["emp_id"], db.today().isoformat(), req["id"]))
+        return _ok(request_id=req["id"], status="CANCELLED", was=req["status"])
+
+    return _run("cancel_request", actor_id, {"request_id": request_id, "confirmed": confirmed}, body)
+
+
+def modify_request(actor_id, request_id, start_date, end_date, half_day=None, confirmed=False):
+    """Change the dates of the actor's own request and check them again. Changing an APPROVED request
+    sends it back to PENDING for a new decision, so it needs `confirmed=True`; at DEF the new start
+    date must also lie within the old dates (DEF 5.8)."""
+    def body(conn, actor):
+        req, error = _own_request(conn, actor, request_id)
+        if error:
+            return error
+        if req["status"] not in BLOCKING:
+            return _err("invalid_state", "A %s request cannot be changed." % req["status"])
+        half = bool(req["half_day"]) if half_day is None else bool(half_day)
+        if (start_date, end_date, half) == (req["start_date"], req["end_date"], bool(req["half_day"])):
+            return _err("no_change", "The dates are the same as before.")
+        if (req["status"] == "APPROVED" and actor["policy_org"] == "DEF"
+                and not req["start_date"] <= str(start_date) <= req["end_date"]):
+            return _err("modify_rule", "The new start date must lie between the old start and end dates (DEF HR Manual 5.8).")
+        check = _check(conn, actor, req["leave_code"], start_date, end_date, half, exclude_id=req["id"])
+        if not check["valid"]:
+            return _invalid(check)
+        if req["status"] == "APPROVED" and not confirmed:
+            return _needs_confirmation("Changing approved leave needs a new approval, so the employee must confirm.", check)
+        new_status = "PENDING" if req["status"] == "APPROVED" else req["status"]
+        _rebook(conn, actor["policy_org"], req, new_status, check["days"])
+        conn.execute("UPDATE leave_requests SET start_date = ?, end_date = ?, half_day = ?, days = ?, status = ?,"
+                     " applied_on = CASE WHEN ? = 'PENDING' THEN ? ELSE applied_on END,"
+                     " decided_by = CASE WHEN ? = 'PENDING' THEN NULL ELSE decided_by END,"
+                     " decided_on = CASE WHEN ? = 'PENDING' THEN NULL ELSE decided_on END WHERE id = ?",
+                     (start_date, end_date, int(half), check["days"], new_status,
+                      new_status, db.today().isoformat(), new_status, new_status, req["id"]))
+        return _ok(request_id=req["id"], status=new_status, days=check["days"], check=check)
+
+    return _run("modify_request", actor_id, {
+        "request_id": request_id, "start_date": start_date, "end_date": end_date, "confirmed": confirmed}, body)

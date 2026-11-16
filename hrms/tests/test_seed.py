@@ -31,6 +31,13 @@ def test_every_manager_exists_and_stays_in_the_same_org():
     assert rows("SELECT COUNT(*) AS n FROM employees WHERE manager_id IS NULL")[0]["n"] == 2
 
 
+def test_one_employee_per_org_is_serving_notice_with_a_start_date():
+    got = rows("SELECT emp_id, notice_start FROM employees WHERE status = 'notice' ORDER BY emp_id")
+    assert [g["emp_id"] for g in got] == ["B018", "D015"]
+    assert all(g["notice_start"] for g in got)
+    assert rows("SELECT COUNT(*) AS n FROM employees WHERE status = 'active' AND notice_start IS NOT NULL")[0]["n"] == 0
+
+
 def test_categories_belong_to_the_employees_org():
     for e in rows("SELECT policy_org, category FROM employees"):
         assert e["category"] in rules.CATEGORIES[e["policy_org"]]

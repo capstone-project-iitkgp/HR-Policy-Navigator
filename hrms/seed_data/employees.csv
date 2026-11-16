@@ -40,7 +40,7 @@ B014,Ramesh Gouda,ramesh.gouda@example.org,BLDEDU,NON_TEACHING,A3,Office Superin
 B015,Dr. Latha Bhat,latha.bhat@example.org,BLDEDU,TEACHING,T3,Associate Professor,Mechanical,B004,2015-07-20,F,2,6,active,,employee
 B016,Dr. Priya Desai,priya.desai@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Mechanical,B004,2021-08-09,F,1,6,active,,employee
 B017,Dr. Mahesh Walvekar,mahesh.walvekar@example.org,BLDEDU,TEACHING,T4,Professor,Computer Science,B003,2009-08-03,M,2,6,active,,employee
-B018,Kiran Patil,kiran.patil@example.org,BLDEDU,NON_TEACHING,A4,Library Assistant,Library,B005,2018-02-05,M,1,6,active,,employee
+B018,Kiran Patil,kiran.patil@example.org,BLDEDU,NON_TEACHING,A4,Library Assistant,Library,B005,2018-02-05,M,1,6,notice,2026-11-05,employee
 B019,Dr. Savita Joshi,savita.joshi@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Mechanical,B004,2020-08-17,F,2,6,active,,employee
 B020,Basavaraj Nandi,basavaraj.nandi@example.org,BLDEDU,NON_TEACHING,A4,Lab Technician,Mechanical,B005,2012-09-10,M,2,6,active,,employee
 B021,Dr. Farhan Mulla,farhan.mulla@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Computer Science,B003,2022-08-22,M,0,6,active,,employee

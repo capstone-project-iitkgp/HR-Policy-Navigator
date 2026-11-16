@@ -94,7 +94,7 @@ BLDEDU_ROWS = [
     # commuted leave used (debited at 2x)
     ("B017", "Dr. Mahesh Walvekar", "TEACHING", "T4", "Professor", "Computer Science", "B003", "2009-08-03", "M", 2, 6, "active", "", "employee"),
     # serving notice
-    ("B018", "Kiran Patil", "NON_TEACHING", "A4", "Library Assistant", "Library", "B005", "2018-02-05", "M", 1, 6, "active", "", "employee"),
+    ("B018", "Kiran Patil", "NON_TEACHING", "A4", "Library Assistant", "Library", "B005", "2018-02-05", "M", 1, 6, "notice", "2026-11-05", "employee"),
     ("B019", "Dr. Savita Joshi", "TEACHING", "T2", "Assistant Professor", "Mechanical", "B004", "2020-08-17", "F", 2, 6, "active", "", "employee"),
     # earned leave carried forward close to the 180-day cap
     ("B020", "Basavaraj Nandi", "NON_TEACHING", "A4", "Lab Technician", "Mechanical", "B005", "2012-09-10", "M", 2, 6, "active", "", "employee"),
