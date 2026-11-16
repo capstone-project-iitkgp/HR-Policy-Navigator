@@ -32,10 +32,10 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 
 ## Setup
 
-Requires Python 3.10+.
+Requires Python 3.10 or newer. The latest release (Python 3.15) is the version we use. On macOS: `brew install python@3.15`. There is one virtual environment for the whole repository (API, `hrms/`, front end and tests), created at the repo root as `.venv`. It is not committed; each person creates their own from `requirements.txt`.
 
 ```bash
-python3 -m venv .venv
+python3.15 -m venv .venv          # any Python 3.10+ also works, e.g. python3.12
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env

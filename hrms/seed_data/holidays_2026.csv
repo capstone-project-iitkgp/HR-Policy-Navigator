@@ -1,0 +1,31 @@
+org,date,name,type
+DEF,2026-01-01,New Year's Day,national
+DEF,2026-01-26,Republic Day,national
+DEF,2026-03-04,Holi,national
+DEF,2026-03-21,Eid-ul-Fitr,national
+DEF,2026-05-27,Eid-ul-Zuha,national
+DEF,2026-08-15,Independence Day,national
+DEF,2026-10-02,Gandhi Jayanti,national
+DEF,2026-10-20,Dussehra,national
+DEF,2026-11-08,Diwali,national
+DEF,2026-12-25,Christmas,national
+DEF,2026-02-15,Maha Shivratri,restricted
+DEF,2026-04-03,Good Friday,restricted
+DEF,2026-08-28,Raksha Bandhan,restricted
+DEF,2026-09-04,Janmashtami,restricted
+DEF,2026-11-24,Guru Nanak Jayanti,restricted
+BLDEDU,2026-01-26,Republic Day,compulsory
+BLDEDU,2026-08-15,Independence Day,compulsory
+BLDEDU,2026-10-02,Gandhi Jayanti,compulsory
+BLDEDU,2026-01-14,Makar Sankranti,public
+BLDEDU,2026-03-19,Ugadi,public
+BLDEDU,2026-03-26,Ram Navami,public
+BLDEDU,2026-04-03,Good Friday,public
+BLDEDU,2026-04-14,Ambedkar Jayanti,public
+BLDEDU,2026-05-01,Labour Day,public
+BLDEDU,2026-05-27,Bakrid,public
+BLDEDU,2026-09-14,Ganesh Chaturthi,public
+BLDEDU,2026-10-20,Dussehra,public
+BLDEDU,2026-11-01,Karnataka Rajyotsava,public
+BLDEDU,2026-11-08,Diwali,public
+BLDEDU,2026-12-25,Christmas,public

@@ -1,0 +1,49 @@
+emp_id,name,email,policy_org,category,grade,designation,department,manager_id,join_date,gender,num_children,work_week_days,status,notice_start,role
+D001,Meera Iyer,meera.iyer@example.org,DEF,FT_PERMANENT,M01,HR Manager,Human Resources,D002,2018-04-02,F,2,5,active,,hr
+D002,Rohan Deshmukh,rohan.deshmukh@example.org,DEF,FT_PERMANENT,M02,Executive Director,Management,,2015-06-01,M,2,5,active,,manager
+D003,Anita Rao,anita.rao@example.org,DEF,FT_PERMANENT,S09,Programme Lead,Programmes,D002,2019-08-12,F,1,5,active,,manager
+D004,Vikram Shetty,vikram.shetty@example.org,DEF,FT_PERMANENT,S08,Finance Lead,Finance,D002,2017-01-16,M,2,5,active,,manager
+D005,Farah Khan,farah.khan@example.org,DEF,FT_PERMANENT,S09,IT Lead,IT,D002,2020-02-03,F,0,5,active,,manager
+D006,Sanjay Patil,sanjay.patil@example.org,DEF,FT_PERMANENT,S03,Programme Officer,Programmes,D003,2021-06-14,M,2,5,active,,employee
+D007,Lakshmi Nair,lakshmi.nair@example.org,DEF,FT_PERMANENT,W05,Field Coordinator,Programmes,D003,2022-01-10,F,1,6,active,,employee
+D008,Imran Sheikh,imran.sheikh@example.org,DEF,FT_PERMANENT,S04,Programme Officer,Programmes,D003,2023-03-06,M,0,5,active,,employee
+D009,Divya Menon,divya.menon@example.org,DEF,FT_PERMANENT,E02,Programme Associate,Programmes,D003,2024-05-20,F,0,5,active,,employee
+D010,Arjun Verma,arjun.verma@example.org,DEF,FT_PERMANENT,S02,Programme Officer,Programmes,D003,2026-03-18,M,0,5,active,,employee
+D011,Kavya Reddy,kavya.reddy@example.org,DEF,FT_PERMANENT,S02,Programme Officer,Programmes,D003,2026-03-12,F,0,5,active,,employee
+D012,Nikhil Joshi,nikhil.joshi@example.org,DEF,FT_PERMANENT,S05,Accounts Executive,Finance,D004,2025-07-10,M,0,5,active,,employee
+D013,Pooja Bansal,pooja.bansal@example.org,DEF,FT_PERMANENT,S05,Accounts Executive,Finance,D004,2024-09-02,F,0,5,active,,employee
+D014,Rahul Khanna,rahul.khanna@example.org,DEF,FT_PROBATION,W03,Data Entry Operator,Finance,D004,2026-09-01,M,0,5,active,,employee
+D015,Sunita Das,sunita.das@example.org,DEF,FT_PERMANENT,S04,Finance Associate,Finance,D004,2019-11-04,F,2,5,notice,2026-11-02,employee
+D016,Neha Kulkarni,neha.kulkarni@example.org,DEF,FT_PERMANENT,S06,Programme Officer,IT,D005,2021-02-22,F,1,5,active,,employee
+D017,Ritu Saxena,ritu.saxena@example.org,DEF,FT_PERMANENT,S06,Systems Analyst,IT,D005,2020-09-14,F,2,5,active,,employee
+D018,Karan Malhotra,karan.malhotra@example.org,DEF,FT_PERMANENT,S06,Developer,IT,D005,2022-04-04,M,1,5,active,,employee
+D019,Deepak Chauhan,deepak.chauhan@example.org,DEF,FT_PERMANENT,S07,Senior Analyst,IT,D005,2016-03-01,M,2,5,active,,employee
+D020,Shreya Gupta,shreya.gupta@example.org,DEF,FT_PERMANENT,S03,QA Engineer,IT,D005,2023-07-17,F,0,5,active,,employee
+D021,Mohan Pillai,mohan.pillai@example.org,DEF,PART_TIME,W02,Office Assistant,Finance,D004,2022-10-03,M,2,5,active,,employee
+D022,Tanvi Jain,tanvi.jain@example.org,DEF,FT_CONTRACT,E01,Consultant,Finance,D004,2025-12-01,F,0,5,active,,employee
+D023,Alok Mishra,alok.mishra@example.org,DEF,FT_PERMANENT,S08,Project Manager,IT,D005,2018-09-10,M,1,6,active,,employee
+D024,Prerna Bose,prerna.bose@example.org,DEF,FT_PERMANENT,S04,Programme Associate,Programmes,D003,2023-11-20,F,0,5,active,,employee
+B001,Dr. Suresh Patil,suresh.patil@example.org,BLDEDU,PRINCIPAL,P1,Principal,Administration,,2012-06-01,M,2,6,active,,manager
+B002,Shobha Kulkarni,shobha.kulkarni@example.org,BLDEDU,NON_TEACHING,A2,HR Officer,Administration,B001,2016-07-11,F,2,6,active,,hr
+B003,Dr. Anand Hiremath,anand.hiremath@example.org,BLDEDU,TEACHING,T5,HOD Computer Science,Computer Science,B001,2010-08-02,M,2,6,active,,manager
+B004,Dr. Rekha Jadhav,rekha.jadhav@example.org,BLDEDU,TEACHING,T5,HOD Mechanical,Mechanical,B001,2011-08-01,F,2,6,active,,manager
+B005,Manjunath Naik,manjunath.naik@example.org,BLDEDU,NON_TEACHING,A3,Accounts Officer,Accounts,B001,2014-04-01,M,1,6,active,,manager
+B006,Dr. Vidya Kulkarni,vidya.kulkarni@example.org,BLDEDU,TEACHING,T3,Associate Professor,Computer Science,B003,2014-08-04,F,2,6,active,,employee
+B007,Santosh Gaonkar,santosh.gaonkar@example.org,BLDEDU,NON_TEACHING,A4,Library Clerk,Library,B005,2017-03-13,M,1,6,active,,employee
+B008,Dr. Pallavi Rane,pallavi.rane@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Mechanical,B004,2019-08-19,F,1,6,active,,employee
+B009,Ganesh Surve,ganesh.surve@example.org,BLDEDU,NON_TEACHING,A4,Peon,Administration,B005,2015-01-05,M,2,6,active,,employee
+B010,Pradeep Shinde,pradeep.shinde@example.org,BLDEDU,NON_TEACHING,A4,Lab Assistant,Mechanical,B005,2026-03-18,M,0,6,active,,employee
+B011,Dr. Anjali Rao,anjali.rao@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Computer Science,B003,2026-03-12,F,0,6,active,,employee
+B012,Vinayak Kamat,vinayak.kamat@example.org,BLDEDU,TEACHING_PROBATION,T1,Assistant Professor,Computer Science,B003,2025-08-18,M,0,6,active,,employee
+B013,Sneha Hegde,sneha.hegde@example.org,BLDEDU,NON_TEACHING_PROBATION,A5,Clerk,Accounts,B005,2026-01-12,F,0,6,active,,employee
+B014,Ramesh Gouda,ramesh.gouda@example.org,BLDEDU,NON_TEACHING,A3,Office Superintendent,Administration,B005,2013-06-03,M,2,6,active,,employee
+B015,Dr. Latha Bhat,latha.bhat@example.org,BLDEDU,TEACHING,T3,Associate Professor,Mechanical,B004,2015-07-20,F,2,6,active,,employee
+B016,Dr. Priya Desai,priya.desai@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Mechanical,B004,2021-08-09,F,1,6,active,,employee
+B017,Dr. Mahesh Walvekar,mahesh.walvekar@example.org,BLDEDU,TEACHING,T4,Professor,Computer Science,B003,2009-08-03,M,2,6,active,,employee
+B018,Kiran Patil,kiran.patil@example.org,BLDEDU,NON_TEACHING,A4,Library Assistant,Library,B005,2018-02-05,M,1,6,active,,employee
+B019,Dr. Savita Joshi,savita.joshi@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Mechanical,B004,2020-08-17,F,2,6,active,,employee
+B020,Basavaraj Nandi,basavaraj.nandi@example.org,BLDEDU,NON_TEACHING,A4,Lab Technician,Mechanical,B005,2012-09-10,M,2,6,active,,employee
+B021,Dr. Farhan Mulla,farhan.mulla@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Computer Science,B003,2022-08-22,M,0,6,active,,employee
+B022,Geeta Kamble,geeta.kamble@example.org,BLDEDU,NON_TEACHING,A4,Staff Nurse,Administration,B005,2019-05-06,F,1,6,active,,employee
+B023,Dr. Nitin Bhosale,nitin.bhosale@example.org,BLDEDU,TEACHING,T2,Assistant Professor,Mechanical,B004,2024-08-12,M,0,6,active,,employee
+B024,Smita Pawar,smita.pawar@example.org,BLDEDU,NON_TEACHING,A3,Accountant,Accounts,B005,2023-01-09,F,0,6,active,,employee
