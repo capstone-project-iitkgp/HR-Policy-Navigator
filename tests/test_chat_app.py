@@ -121,3 +121,68 @@ def test_traces_can_be_switched_off(monkeypatch, tmp_path):
     say(at, "balance?")
     assert summary.load(tmp_path / "traces") == []
     assert "trace " not in texts(at.chat_message[1].caption)
+
+
+# ---- step 2: Confirm and Discard for drafts ------------------------------------
+
+from hrms import service  # noqa: E402
+
+
+def draft_turn(code="CL", day="2026-12-02", question="Apply casual leave on 2 December 2026"):
+    call = tool_call("create_leave_draft", {"leave_code": code, "start_date": day, "end_date": day})
+    final = FinalAnswer(behaviour="draft_for_confirmation", answer="I saved a draft. Please confirm it below.")
+    return question, [Plan(route="hrms", reason="r"), call, "DONE", final, Critique(verdict="ok")]
+
+
+def newest(emp):
+    return max(service.list_requests(emp)["requests"], key=lambda r: r["id"])
+
+
+def button(at, prefix):
+    return next(b for b in at.button if b.key and b.key.startswith(prefix))
+
+
+def test_a_draft_turn_shows_confirm_and_discard_but_files_nothing(monkeypatch):
+    q, items = draft_turn()
+    at = say(open_page(monkeypatch, Script(*items)), q)
+    assert "confirm" in texts(at.chat_message[1].markdown).lower()
+    assert button(at, "submit_") and button(at, "discard_")
+    assert newest("D010")["status"] == "DRAFT"  # the agent only saved a draft
+
+
+def test_confirm_files_the_request_only_after_the_click(monkeypatch):
+    q, items = draft_turn()
+    at = say(open_page(monkeypatch, Script(*items)), q)
+    rid = newest("D010")["id"]
+    button(at, "submit_").click().run()
+    assert not at.exception
+    assert newest("D010")["id"] == rid and newest("D010")["status"] == "PENDING"
+    assert "submitted" in texts(at.success)
+    assert not [b for b in at.button if b.key and b.key.startswith("submit_")]  # the card is closed
+    assert "now pending" in texts(at.chat_message[1].caption)
+
+
+def test_discard_cancels_the_draft(monkeypatch):
+    q, items = draft_turn()
+    at = say(open_page(monkeypatch, Script(*items)), q)
+    button(at, "discard_").click().run()
+    assert newest("D010")["status"] == "CANCELLED"
+    assert "discarded" in texts(at.success) and "discarded" in texts(at.chat_message[1].caption)
+
+
+def test_a_missing_document_blocks_the_confirm_until_it_is_ticked(monkeypatch):
+    at = open_page(monkeypatch)
+    at.sidebar.selectbox(key="who").select("D020").run()
+    q, items = draft_turn("SL", "2026-11-13", "Apply sick leave on 13 November 2026")
+    monkeypatch.setattr(orchestrator, "chat", Script(*items))
+    say(at, q)
+    button(at, "submit_").click().run()
+    assert "Medical certificate" in texts(at.error) and newest("D020")["status"] == "DRAFT"
+    at.checkbox(key=next(c.key for c in at.checkbox if c.key and c.key.startswith("doc_"))).set_value(True)
+    button(at, "submit_").click().run()
+    assert newest("D020")["status"] == "PENDING"
+
+
+def test_turns_without_a_draft_have_no_buttons(monkeypatch):
+    at = say(open_page(monkeypatch, Script(*HRMS_TURN)), "balance?")
+    assert not [b for b in at.button if b.key and b.key.startswith(("submit_", "discard_"))]
