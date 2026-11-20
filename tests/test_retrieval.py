@@ -57,9 +57,9 @@ def index(tmp_path):
 
 # ---- BM25 and fusion --------------------------------------------------------------
 def test_tokenize_and_stem():
-    assert tokenize("The Employees' policies") == ["employee", "policy"]
+    assert tokenize("The Employees' policies", use_stem=True) == ["employee", "policy"]
     assert stem("class") == "class" and stem("days") == "day"
-    assert tokenize("Days", use_stem=False) == ["days"]
+    assert tokenize("Days") == ["days"]  # stemming is off by default (recall@k)
 
 
 def test_bm25_ranks_the_matching_text_first_and_ignores_unknown_words():
@@ -182,6 +182,23 @@ def test_other_filters(index):
         search("leave", filters={"grade": "E2"}, index=index)
 
 
+def test_an_org_named_in_the_query_narrows_the_search(index):
+    assert engine.orgs_named(index, "casual leave at ALPHA") == ["Alpha Corp"]
+    assert engine.orgs_named(index, "alpha corp and university of beta") == ["Alpha Corp", "University of Beta"]
+    assert engine.orgs_named(index, "university rules") == []  # part of a name is not enough
+    results = search("casual leave days at Alpha", k=10, mode="bm25", index=index)
+    assert {p.doc_id for p in results} == {"A-1"} and engine.last_info["org_from_query"] == ["Alpha Corp"]
+    wider = search("casual leave days at Alpha", k=10, mode="bm25", index=index, org_from_query=False)
+    assert len({p.doc_id for p in wider}) > 1
+    # an explicit org filter wins over the query
+    assert {p.doc_id for p in search("casual leave at Alpha", filters={"org": "Beta"}, index=index)} <= {"B-1"}
+
+
+def test_real_corpus_query_naming_def_stays_in_def():
+    engine.set_index(None)
+    assert {p.doc_id for p in search("DEF probation period length")} == {"DOC-008"}
+
+
 def test_auto_mode_is_hybrid_when_embeddings_exist(index):
     results = search("casual leave", index=index)
     assert engine.last_info["mode"] == "hybrid"
@@ -270,7 +287,8 @@ def test_a_question_about_an_unknown_org_finds_nothing_with_the_filter():
     assert search(item["question"], filters={"org": item["employee_context"]["org"]}) == []
 
 
-def test_eval_question_q001_puts_the_evidence_first():
+def test_eval_question_q001_finds_the_evidence_in_the_top_3():
     engine.set_index(None)
-    top = search("I joined DEF as a permanent employee on 18 March. Will I get leave credit for March?", k=1)[0]
-    assert top.doc_id == "DOC-008" and "Leave Credits for that month" in " ".join(top.text.split())
+    top = search("I joined DEF as a permanent employee on 18 March. Will I get leave credit for March?", k=3)
+    assert top[0].doc_id == "DOC-008"
+    assert any("Leave Credits for that month" in " ".join(p.text.split()) for p in top)

@@ -41,14 +41,14 @@ class Index:
     texts: list[str]  # index_text for each passage (header + chunk text)
     flags: list[str | None]  # injection_reason for each passage
     bm25: BM25
-    use_stem: bool = True
+    use_stem: bool = False
     dense: DenseIndex | None = None
     embedder: Embedder | None = None
     notes: list[str] = field(default_factory=list)
 
 
 def build_index(manifest: str | Path = DEFAULT_MANIFEST, settings: ChunkSettings = ChunkSettings(), *,
-                dense: str = "cached", embedder: Embedder | None = None, use_stem: bool = True,
+                dense: str = "cached", embedder: Embedder | None = None, use_stem: bool = False,
                 docs: list[Document] | None = None) -> Index:
     """``dense``: "off", "cached" (use vectors only if every chunk is already cached) or "build"
     (call the endpoint for missing vectors)."""

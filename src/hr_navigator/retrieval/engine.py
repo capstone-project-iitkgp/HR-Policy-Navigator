@@ -15,6 +15,12 @@ Filters (all optional, case-insensitive): ``doc_id``, ``org`` (full name or alia
 several), ``jurisdiction`` and ``category`` (substring), ``synthetic`` (bool). An unknown key
 raises ValueError.
 
+Organisation from the query: when no ``org`` filter is given and the query names organisations of
+the corpus (full name or alias as whole words, e.g. "DEF", "Kentucky"), search keeps to those
+organisations (``last_info["org_from_query"]``). BM25 alone gives the organisation's name too
+little weight: "DEF probation period" ranked another organisation's probation rules first.
+``org_from_query=False`` turns this off (the recall@k harness measures both).
+
 Results: best first, at most ``k``, never a passage that looks like an injected instruction
 (see safeguards/untrusted.py). ``Passage.scores`` holds the scores that were computed: "bm25",
 "dense", "rrf". There is no reranker yet (see docs/decisions/a4_retrieval.md).
@@ -98,6 +104,16 @@ def _allowed(index: Index, filters: dict[str, Any] | None) -> list[int]:
     return keep
 
 
+def orgs_named(index: Index, query: str) -> list[str]:
+    """Organisations the query names (full name or alias, whole words), in manifest order."""
+    named = []
+    for doc in index.docs.values():
+        if any(_word_match(name, query) for name in doc.org_names() if len(name) <= len(query)) \
+                and doc.org not in named:
+            named.append(doc.org)
+    return named
+
+
 def _resolve_mode(index: Index, mode: str | None) -> str:
     mode = (mode or os.environ.get("RETRIEVAL_MODE") or "auto").lower()
     if mode not in MODES:
@@ -116,10 +132,15 @@ def _top(scores, allowed: list[int], n: int, positive_only: bool) -> list[int]:
 
 
 def search(query: str, k: int = 5, filters: dict | None = None, *, mode: str | None = None,
-           index: Index | None = None) -> list:
+           index: Index | None = None, org_from_query: bool = True) -> list:
     index = index or get_index()
     info: dict[str, Any] = {"query": query, "k": k, "filters": filters or {}, "degraded": False, "dropped": []}
     use = _resolve_mode(index, mode)
+    if org_from_query and not (filters or {}).get("org") and query:
+        named = orgs_named(index, query)
+        if named:
+            filters = {**(filters or {}), "org": ";".join(named)}
+            info["org_from_query"] = named
     matching = _allowed(index, filters)
     allowed = [i for i in matching if not index.flags[i]]
     info["dropped"] = [index.passages[i].chunk_id for i in matching if index.flags[i]]

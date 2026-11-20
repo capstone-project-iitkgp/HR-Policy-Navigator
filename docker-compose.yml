@@ -1,0 +1,42 @@
+# docker compose up --build      ->  API on http://localhost:8000, chat page on http://localhost:8501
+# Needs a .env next to this file for real answers (copy .env.example). CA files go in ./certs and are
+# referenced from .env as certs/<file>.crt. Without .env both services start, /health and /chat/status
+# work, and questions get the "assistant is unreachable" reply. See deploy/README.md.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: hr-policy-navigator:latest
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./certs:/app/certs:ro
+      - app-cache:/app/.cache
+
+  ui:
+    image: hr-policy-navigator:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    command: ["python", "-m", "streamlit", "run", "app/chat_app.py",
+              "--server.address", "0.0.0.0", "--server.port", "8501", "--server.headless", "true"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./certs:/app/certs:ro
+      - app-cache:/app/.cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+
+volumes:
+  app-cache:

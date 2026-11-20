@@ -12,8 +12,10 @@ For every eval item with ``gold_sources`` the raw question is the query. Metrics
 - evidence_reachable: share of items whose quote exists in at least one chunk at all; evidence
   recall cannot be higher than this (a quote can be cut by a chunk boundary or a page footer).
 
-"org filter" passes ``filters={"org": <employee_context.org>}`` when the item has an employee
-organisation, the way the agent could from the employee profile.
+"org" says where the organisation comes from: "none" (search ignores organisations), "query"
+(search keeps to organisations the question names; the default in engine.search) or "profile"
+(``filters={"org": <employee_context.org>}``, the way the agent could pass it from the employee
+profile; falls back to "query" when the item has no organisation).
 
 Writes evaluation/retrieval_results.csv and evaluation/retrieval_results.md.
 """
@@ -55,15 +57,16 @@ def item_org(item: dict) -> str | None:
     return ((item.get("employee_context") or {}).get("org") or None)
 
 
-def evaluate(items: list[dict], index: Index, mode: str, org_filter: bool) -> tuple[dict, list[dict]]:
+def evaluate(items: list[dict], index: Index, mode: str, org: str = "query") -> tuple[dict, list[dict]]:
     """Returns (metrics, per-item rows)."""
     texts = [norm(p.text) for p in index.passages]
     rows = []
     for item in items:
         gold = {g["doc_id"] for g in item["gold_sources"]}
         quotes = [norm(q) for q in item.get("evidence_quotes") or [] if q.strip()]
-        org = item_org(item) if org_filter else None
-        results = search(item["question"], k=max(KS), filters={"org": org} if org else None, mode=mode, index=index)
+        profile_org = item_org(item) if org == "profile" else None
+        results = search(item["question"], k=max(KS), filters={"org": profile_org} if profile_org else None,
+                         mode=mode, index=index, org_from_query=(org != "none"))
         ranks = [r + 1 for r, p in enumerate(results) if p.doc_id in gold]
         ev_ranks = [r + 1 for r, p in enumerate(results) if any(q in norm(p.text) for q in quotes)]
         rows.append({
@@ -102,9 +105,9 @@ def main(argv: list[str] | None = None) -> int:
                 if mode != "bm25" and index.dense is None:
                     print(f"skip {mode} at {settings.name}: no cached embeddings")
                     continue
-                for org_filter in (False, True):
-                    m, rows = evaluate(items, index, mode, org_filter)
-                    key = dict(chunking=settings.name, mode=mode, stem=use_stem, org_filter=org_filter)
+                for org in ("none", "query", "profile"):
+                    m, rows = evaluate(items, index, mode, org)
+                    key = dict(chunking=settings.name, mode=mode, stem=use_stem, org=org)
                     table.append({**key, **m})
                     details[tuple(key.values())] = rows
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -114,7 +117,7 @@ def main(argv: list[str] | None = None) -> int:
         w.writerows(table)
 
     best = max(table, key=lambda r: (r["doc_recall@5"], r["evidence_recall@5"], r["mrr"]))
-    rows = details[(best["chunking"], best["mode"], best["stem"], best["org_filter"])]
+    rows = details[(best["chunking"], best["mode"], best["stem"], best["org"])]
     by_type = defaultdict(list)
     for r in rows:
         by_type[r["type"]].append(bool(r["first_gold_rank"] and r["first_gold_rank"] <= 5))
@@ -126,15 +129,15 @@ def main(argv: list[str] | None = None) -> int:
         f"eval_v1 ({len(items)} items with gold sources; {best['n_with_quotes']} with evidence quotes). "
         f"Corpus: {len(docs)} documents. Run time {time.time() - t0:.1f} s. Full table: `retrieval_results.csv`.",
         "",
-        "| chunking | mode | stem | org filter | doc R@1 | doc R@5 | doc R@10 | evid R@5 | evid reachable | MRR |",
+        "| chunking | mode | stem | org | doc R@1 | doc R@5 | doc R@10 | evid R@5 | evid reachable | MRR |",
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in table:
-        lines.append(f"| {r['chunking']} | {r['mode']} | {r['stem']} | {r['org_filter']} | {r['doc_recall@1']} | "
+        lines.append(f"| {r['chunking']} | {r['mode']} | {r['stem']} | {r['org']} | {r['doc_recall@1']} | "
                      f"{r['doc_recall@5']} | {r['doc_recall@10']} | {r['evidence_recall@5']} | "
                      f"{r['evidence_reachable']} | {r['mrr']} |")
     lines += ["", f"**Best by doc recall@5:** chunking {best['chunking']}, mode {best['mode']}, stem {best['stem']}, "
-              f"org filter {best['org_filter']}.", "", "doc recall@5 by question type (best setting):", ""]
+              f"org {best['org']}.", "", "doc recall@5 by question type (best setting):", ""]
     for t, hits in sorted(by_type.items()):
         lines.append(f"- {t}: {sum(hits)}/{len(hits)}")
     lines += ["", f"Misses at k=5 (best setting): {len(misses)}", ""]

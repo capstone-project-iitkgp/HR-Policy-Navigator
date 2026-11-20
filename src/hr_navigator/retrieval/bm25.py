@@ -25,7 +25,10 @@ STOPWORDS = frozenset(
 
 
 def stem(word: str) -> str:
-    """Tiny suffix rule so 'employees'/'employee' and 'policies'/'policy' match. Not Porter."""
+    """Tiny suffix rule so 'employees'/'employee' and 'policies'/'policy' match. Not Porter.
+
+    Off by default: on eval_v1 it lowered evidence recall@5 slightly (2 of 66 items).
+    """
     if len(word) > 4 and word.endswith("ies"):
         return word[:-3] + "y"
     if len(word) > 3 and word.endswith("s") and not word.endswith(("ss", "us", "is")):
@@ -33,7 +36,7 @@ def stem(word: str) -> str:
     return word
 
 
-def tokenize(text: str, *, use_stem: bool = True) -> list[str]:
+def tokenize(text: str, *, use_stem: bool = False) -> list[str]:
     words = [w for w in _WORD.findall(text.lower()) if w not in STOPWORDS]
     return [stem(w) for w in words] if use_stem else words
 

@@ -27,7 +27,7 @@ def test_metrics_on_known_answers():
         item("Q2", "mileage per mile", "A", ["not in any chunk"]),  # wrong doc first, gold second
         item("Q3", "xylophone", "B", ["Mileage is paid"]),  # nothing found
     ]
-    m, rows = evaluate(items, idx, "bm25", org_filter=False)
+    m, rows = evaluate(items, idx, "bm25", org="none")
     assert m["n"] == 3
     assert m["doc_recall@1"] == pytest.approx(1 / 3, abs=1e-3)
     assert m["evidence_recall@1"] == pytest.approx(1 / 3, abs=1e-3)
@@ -38,7 +38,7 @@ def test_metrics_on_known_answers():
 
 def test_org_filter_is_taken_from_the_employee_profile():
     idx = build_index(docs=DOCS, settings=ChunkSettings(50, 0, 80), dense="off")
-    m, rows = evaluate([item("Q1", "leave mileage", "B", [], org="Beta Uni")], idx, "bm25", org_filter=True)
+    m, rows = evaluate([item("Q1", "leave mileage", "B", [], org="Beta Uni")], idx, "bm25", org="profile")
     assert rows[0]["top"] == ["B"] and m["doc_recall@1"] == 1.0
 
 
