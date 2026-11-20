@@ -121,6 +121,7 @@ class Tracer:
     def __init__(self, sink: Sink | None = None, *, enabled: bool = True, clock: Callable[[], int] = time.time_ns):
         self.sink, self.enabled, self._clock = sink, enabled, clock
         self._warned = False
+        self.last_trace_id = ""  # trace id of the most recent root span (for --trace output)
 
     @contextmanager
     def span(self, name: str, kind: str = "CHAIN", **attrs: Any) -> Iterator[Span | _NullSpan]:
@@ -144,6 +145,8 @@ class Tracer:
             self._emit(sp)
 
     def _emit(self, sp: Span) -> None:
+        if sp.parent_id is None:
+            self.last_trace_id = sp.trace_id
         try:
             self.sink.write(sp.record())  # type: ignore[union-attr]
         except Exception:  # tracing must never break the agent

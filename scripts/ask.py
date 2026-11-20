@@ -28,6 +28,7 @@ from hr_navigator.agents import orchestrator  # noqa: E402
 from hr_navigator.agents.orchestrator import Agent  # noqa: E402
 from hr_navigator.agents.toolbox import ToolBox  # noqa: E402
 from hr_navigator.llm import config  # noqa: E402
+from hr_navigator.observability import summary, tracing  # noqa: E402
 from hr_navigator.schemas import AgentRequest, Passage  # noqa: E402
 from hr_navigator.state.session_store import SessionStore  # noqa: E402
 
@@ -67,6 +68,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--session", default="", help="session id to keep memory across calls (SQLite)")
     ap.add_argument("--llm", action="store_true", help="print every model call")
+    ap.add_argument("--trace", action="store_true", help="write spans to .cache/traces and print a latency/token summary")
     args = ap.parse_args(argv)
 
     item = None
@@ -90,7 +92,8 @@ def main(argv=None) -> int:
     print(f"model {endpoint.model} | search: {source} | critic: {args.critic}\n")
     if args.llm:
         orchestrator.chat = trace_llm(orchestrator.chat)
-    agent = Agent(ToolBox(search), store=SessionStore() if args.session else None, critic=args.critic)
+    tracer = tracing.configure(enabled=args.trace)
+    agent = Agent(ToolBox(search), store=SessionStore() if args.session else None, critic=args.critic, tracer=tracer)
     profile = dict(item["employee_context"]) if item and not args.employee else None
     response, state = agent.run_with_state(
         AgentRequest(question=question, session_id=args.session, employee_id=args.employee), seed=args.seed,
@@ -106,6 +109,10 @@ def main(argv=None) -> int:
     for c in response.citations:
         print(f"  cite [{c.chunk_id}] {c.doc_id}: {c.quote[:120]!r}")
     print(f"--- tokens in {response.usage.tokens_in}, out {response.usage.tokens_out}, steps {state.steps}")
+    if args.trace:
+        spans = [x for x in summary.load(tracer.sink.directory) if x["trace_id"] == tracer.last_trace_id]
+        print("--- trace\n" + (summary.format_summary(summary.summarize(spans)) if spans else "no spans were written"))
+        print(f"  spans in {tracer.sink.directory}")
     return 0 if response.status != "error" else 1
 
 

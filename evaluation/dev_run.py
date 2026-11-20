@@ -68,7 +68,7 @@ def run_item(item: dict, today: str = "2026-11-20") -> dict:
     return out
 
 
-def run_item_agent(item: dict, today: str = "2026-11-20") -> dict:
+def run_item_agent(item: dict, today: str = "2026-11-20", tracer=None) -> dict:
     """The full loop on a dev item. The item's own passages are the search result (every query gets
     all of them, in order), so this tests the loop and the prompts, not retrieval."""
     from hr_navigator.agents.orchestrator import Agent
@@ -76,7 +76,7 @@ def run_item_agent(item: dict, today: str = "2026-11-20") -> dict:
     from hr_navigator.schemas import AgentRequest
 
     passages = [Passage(**p) for p in item["passages"]]
-    agent = Agent(ToolBox(lambda query, k=5, filters=None: passages))
+    agent = Agent(ToolBox(lambda query, k=5, filters=None: passages), tracer=tracer)
     out = {"qid": item["qid"], "expected": item["expected_behaviour"], "expected_route": item["expected_route"]}
     try:
         resp, state = agent.run_with_state(AgentRequest(question=item["question"], session_id="", employee_id=None),
@@ -94,6 +94,8 @@ def run_item_agent(item: dict, today: str = "2026-11-20") -> dict:
                    trace=[s["note"] for s in resp.steps], tokens=resp.usage.tokens_in + resp.usage.tokens_out)
         critic = [s["note"] for s in resp.steps if "critic ->" in s["note"]]
         out["critic"] = critic[0].split("-> ")[1][:6] if critic else "-"
+        if tracer is not None:
+            out["trace_id"] = tracer.last_trace_id
     except Exception as exc:  # noqa: BLE001
         out["error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
     return out
@@ -104,14 +106,21 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default=None)
     ap.add_argument("--limit", type=int)
     ap.add_argument("--agent", action="store_true", help="run the full H5 loop instead of planner->answer->critic")
+    ap.add_argument("--trace", action="store_true", help="with --agent: write one trace per item to .cache/traces")
     args = ap.parse_args(argv)
     items = [json.loads(l) for l in DEV.read_text().splitlines() if l.strip()][: args.limit]
     out = Path(args.out or f"evaluation/results/dev_{'h5' if args.agent else 'h4'}_{datetime.date.today()}.jsonl")
     out.parent.mkdir(parents=True, exist_ok=True)
+    tracer = None
+    if args.trace:
+        if not args.agent:
+            raise SystemExit("--trace needs --agent")
+        from hr_navigator.observability import tracing
+        tracer = tracing.configure(enabled=True)
     rows = []
     with out.open("w", encoding="utf-8") as f:
         for item in items:
-            row = (run_item_agent if args.agent else run_item)(item)
+            row = run_item_agent(item, tracer=tracer) if args.agent else run_item(item)
             rows.append(row)
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             print(f"{row['qid']} exp={row['expected']:<20} got={row.get('behaviour', 'ERROR'):<20} "
@@ -122,6 +131,14 @@ def main(argv=None) -> int:
     ok = sum(1 for r in rows if r.get("behaviour_ok"))
     print(f"\nbehaviour {ok}/{n}; route {sum(1 for r in rows if r.get('route_ok'))}/{n}; "
           f"citation problems in {sum(1 for r in rows if r.get('citation_problems'))}; errors {sum(1 for r in rows if r.get('error'))}")
+    if tracer is not None:
+        from hr_navigator.observability import summary
+        traces = summary.by_trace(s for s in summary.load(tracer.sink.directory) if s["trace_id"] in {r.get("trace_id") for r in rows})
+        sums = [summary.summarize(t) for t in traces.values()]
+        if sums:
+            print(f"traces {len(sums)} in {tracer.sink.directory}: mean latency {sum(x['latency_ms'] for x in sums) / len(sums) / 1000:.1f} s, "
+                  f"mean tokens {sum(x['tokens_in'] + x['tokens_out'] for x in sums) // len(sums)}, "
+                  f"model calls {sum(x['llm_calls'] for x in sums)}, error spans {sum(x['errors'] for x in sums)}")
     print(f"wrote {out}. Read the answers: this is a dev loop, not a result.")
     return 0
 
