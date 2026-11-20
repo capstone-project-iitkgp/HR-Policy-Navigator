@@ -38,7 +38,16 @@ def check_citations(answer: FinalAnswer, passages: list[Passage]) -> list[str]:
         if c.passage_id not in by_id:
             problems.append(f"passage '{c.passage_id}' was not retrieved")
         elif _norm(c.quote) not in by_id[c.passage_id]:
-            problems.append(f"quote is not in passage '{c.passage_id}': {c.quote[:60]!r}")
+            problems.append(f"quote is not in passage '{c.passage_id}': {c.quote[:200]!r}")
     if answer.behaviour == "answer" and not answer.citations:
         problems.append("an answer from policy needs at least one citation")
     return problems
+
+
+def unsupported_numbers(answer_text: str, *sources: str) -> list[str]:
+    """Digit strings in the answer that appear in none of the sources (passages, tool results, the question).
+
+    A cheap code check for invented figures; it does not see number words ("seven"), so it is
+    a floor, not a proof."""
+    seen = " ".join(_norm(s) for s in sources)
+    return sorted({n for n in re.findall(r"\d+(?:[.,]\d+)?", answer_text) if n not in re.findall(r"\d+(?:[.,]\d+)?", seen)})

@@ -14,7 +14,7 @@ P = [Passage(doc_id="DOC-1", chunk_id="c1", title="Leave", text="Full-time emplo
 @pytest.mark.parametrize("name", prompts.NAMES)
 def test_every_prompt_loads_is_short_and_has_no_stray_placeholder(name):
     p = prompts.load(name)
-    assert p.version == 1 and len(p.hash) == 12
+    assert p.version >= 1 and len(p.hash) == 12
     assert len(p.text.split()) < 450  # small model, 8192-token window
     with pytest.raises(ValueError, match="no value for"):
         p.render()  # placeholders must be filled
@@ -72,3 +72,9 @@ def test_answer_without_citation_is_a_problem_but_refusal_is_not():
     assert render.check_citations(none, P)
     refuse = schemas.FinalAnswer(behaviour="refuse_not_in_corpus", answer="The documents do not say.")
     assert render.check_citations(refuse, P) == []
+
+
+def test_unsupported_numbers_finds_invented_figures_only():
+    src = "Casual leave is 12 days a year. Claims within 7 days."
+    assert render.unsupported_numbers("You get 12 days, claim within 7.", src, "How many?") == []
+    assert render.unsupported_numbers("You get 15 days and $50.", src) == ["15", "50"]

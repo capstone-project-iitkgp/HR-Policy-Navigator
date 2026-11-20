@@ -52,10 +52,12 @@ def run_item(item: dict, today: str = "2026-11-20") -> dict:
         final = call("answer", FinalAnswer, today=today, profile=profile, plan=plan.model_dump_json(),
                      passages=shown, tool_results="(none)", question=item["question"])
         out.update(behaviour=final.behaviour, answer=final.answer, behaviour_ok=final.behaviour == item["expected_behaviour"],
-                   citation_problems=render.check_citations(final, passages))
+                   citation_problems=render.check_citations(final, passages),
+                   unsupported_numbers=render.unsupported_numbers(
+                       final.answer, shown, item["question"], profile))
         low = final.answer.lower()
         out["facts_ok"] = all(m.lower() in low for m in item["must_include"])
-        crit = call("critic", Critique, profile=profile, question=item["question"], passages=shown,
+        crit = call("critic", Critique, behaviour=final.behaviour, profile=profile, question=item["question"], passages=shown,
                     tool_results="(none)", draft=final.answer)
         out.update(critic=crit.verdict, critic_issues=crit.issues)
     except client.SchemaError as exc:
@@ -82,7 +84,7 @@ def main(argv=None) -> int:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             print(f"{row['qid']} exp={row['expected']:<20} got={row.get('behaviour', 'ERROR'):<20} "
                   f"route={'ok' if row.get('route_ok') else 'X'} facts={'ok' if row.get('facts_ok') else 'X'} "
-                  f"cites={'ok' if not row.get('citation_problems', ['x']) else 'X'} critic={row.get('critic', '-')}"
+                  f"cites={'ok' if not row.get('citation_problems', ['x']) else 'X'} nums={'ok' if not row.get('unsupported_numbers', ['x']) else 'X'} critic={row.get('critic', '-')}"
                   + (f"  {row['error']}" if row.get("error") else ""))
     n = len(rows)
     ok = sum(1 for r in rows if r.get("behaviour_ok"))

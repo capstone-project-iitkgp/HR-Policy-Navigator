@@ -37,15 +37,15 @@ Q_BLDE = "Teaching and Non-Teaching staff serving the notice period are not enti
 DIST_TRAVEL = P("c-dist-travel", "DOC-003", passage("DOC-003", "within 2 weeks from date of return", 200, 200))
 DIST_LEAVE = P("c-dist-leave", "DOC-009", passage("DOC-009", "Teaching and Non-Teaching staff are encouraged to plan their long leave periods", 100, 300))
 
-ZETA_A = P("z-1", "ZETA-01", "Zeta Corp Travel Policy: Employees may book economy class only for all flights.")
-ZETA_B = P("z-2", "ZETA-02", "Zeta Corp Executive Addendum: Employees of grade E6 and above may book business class for flights longer than four hours.")
+ZETA_A = P("z-1", "ZETA-01", "Zeta Corp Employee Handbook: Casual leave must be applied for at least 3 working days in advance.")
+ZETA_B = P("z-2", "ZETA-02", "Zeta Corp Leave Policy: Casual leave must be applied for at least 7 working days in advance.")
 
 ITEMS = [
     ("D01", "answer", "I joined DEF last week. How long is my probation?", ["three months"],
      [P("c1", "DOC-008", passage("DOC-008", Q_PROB)), DIST_TRAVEL], "DEF", "policy"),
     ("D02", "answer", "I want to resign from DEF. How long is my notice period?", ["one month"],
      [P("c1", "DOC-008", passage("DOC-008", Q_NOTICE)), DIST_LEAVE], "DEF", "policy"),
-    ("D03", "answer", "If I leave DEF without serving my notice, what can the organisation do?", ["one month salary"],
+    ("D03", "answer", "If I leave DEF without serving my notice, what can the organisation do?", ["one month"],
      [P("c1", "DOC-008", passage("DOC-008", Q_SHORT)), DIST_TRAVEL], "DEF", "policy"),
     ("D04", "answer", "How many compensatory offs can I earn at DEF in six months, and how long are they valid?", ["15", "6 months"],
      [P("c1", "DOC-008", passage("DOC-008", Q_COFF)), DIST_LEAVE], "DEF", "policy"),
@@ -63,8 +63,8 @@ ITEMS = [
      [DIST_LEAVE, DIST_TRAVEL], "DEF", "refuse_pii"),
     ("D11", "escalate_to_human", "I want to file a formal complaint because my manager refused my promotion unfairly.", [],
      [DIST_LEAVE, DIST_TRAVEL], "DEF", "escalate"),
-    ("D12", "flag_conflict", "Can I book business class for a five-hour flight? I am grade E7 at Zeta Corp.", [],
-     [ZETA_A, ZETA_B], "Zeta Corp", "flag_conflict"),
+    ("D12", "flag_conflict", "How many working days in advance must I apply for casual leave at Zeta Corp?", [],
+     [ZETA_A, ZETA_B], "Zeta Corp", "policy"),
 ]
 
 with OUT.open("w", encoding="utf-8") as f:

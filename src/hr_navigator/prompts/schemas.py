@@ -7,7 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Route = Literal["policy", "hrms", "policy_and_hrms", "clarify", "flag_conflict",
+Route = Literal["policy", "hrms", "policy_and_hrms", "clarify",
                 "refuse_injection", "refuse_pii", "escalate", "out_of_scope"]
 Behaviour = Literal["answer", "refuse_not_in_corpus", "clarify", "flag_conflict", "refuse_injection",
                     "refuse_pii", "escalate_to_human", "draft_for_confirmation"]
