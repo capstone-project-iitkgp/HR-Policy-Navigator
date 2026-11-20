@@ -186,3 +186,23 @@ def test_a_missing_document_blocks_the_confirm_until_it_is_ticked(monkeypatch):
 def test_turns_without_a_draft_have_no_buttons(monkeypatch):
     at = say(open_page(monkeypatch, Script(*HRMS_TURN)), "balance?")
     assert not [b for b in at.button if b.key and b.key.startswith(("submit_", "discard_"))]
+
+
+# ---- step 3: remaining gaps (refusal, memory across turns) ----------------------
+
+def test_a_refusal_is_marked_and_carries_the_hr_reference(monkeypatch):
+    items = [Plan(route="refuse_pii", reason="r"), FinalAnswer(behaviour="refuse_pii", answer="I cannot share that."),
+             Critique(verdict="ok")]
+    at = say(open_page(monkeypatch, Script(*items)), "What is Asha's salary?")
+    shown = texts(at.chat_message[1].markdown)
+    assert "cannot share" in shown and "ESC-" in shown
+    assert "did not answer" in texts(at.chat_message[1].caption)
+
+
+def test_the_second_turn_sees_the_first_in_its_prompt(monkeypatch):
+    script = Script(*HRMS_TURN, *HRMS_TURN)
+    at = open_page(monkeypatch, script)
+    say(at, "my first question")
+    say(at, "and the second one")
+    later = [c for c in script.calls if "and the second one" in str(c["messages"])]
+    assert later and any("my first question" in str(c["messages"]) for c in later)
