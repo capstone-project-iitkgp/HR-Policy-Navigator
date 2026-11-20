@@ -83,7 +83,7 @@ class Agent:
     def _pipeline(self, state: AgentState) -> FinalAnswer | None:
         state.plan = self._plan(state)
         route = state.plan.route
-        if route == "refuse_injection":
+        if route in ("refuse_injection", "clarify"):  # clarify needs the policy to name the options
             self._search_once(state, state.plan.steps[0] if state.plan.steps else state.question)
         elif route in TOOL_ROUTES:
             self._execute(state, route)
@@ -121,7 +121,7 @@ class Agent:
 
     # -- execute
     def _search_once(self, state: AgentState, query: str) -> None:
-        state.step(f"tool {POLICY_TOOL} (once, for a refusal)")
+        state.step(f"tool {POLICY_TOOL} (once, by code)")
         self._run_tool(state, POLICY_TOOL, {"query": query}, "policy")
 
     def _run_tool(self, state: AgentState, name: str, args: dict[str, Any], route: str):
@@ -132,12 +132,15 @@ class Agent:
 
     def _execute(self, state: AgentState, route: str) -> None:
         schemas = self.tools.schemas(route)
-        text = prompts.load("executor").render(plan=state.plan.model_dump_json(), gathered=state.gathered_text())
+        text = prompts.load("executor").render(plan=state.plan.model_dump_json(), gathered=state.gathered_text(),
+                                               **self._common(state))
         messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}]
-        first, nudged, repeats, bad_turns = True, False, 0, 0
+        first, nudged, repeats, bad_turns, empty_searches = True, False, 0, 0, 0
         while True:
             if state.at_cap:
                 state.note("step_cap reached: going to the answer with what was gathered")
+                return
+            if not schemas:
                 return
             if estimate_tokens(json.dumps(messages) + json.dumps(schemas)) > CONTEXT_LIMIT - OUTPUT_RESERVE:
                 state.note("token budget reached in the executor: going to the answer")
@@ -157,6 +160,9 @@ class Agent:
             call = res.tool_calls[0]  # one at a time, as the prompt says
             fn = call.get("function", {})
             name, raw = fn.get("name", ""), fn.get("arguments")
+            if name.strip().upper() == "DONE":  # Qwen sometimes "calls" DONE as if it were a tool
+                state.step("executor said DONE (as a tool call)")
+                return
             try:
                 args = json.loads(raw) if isinstance(raw, str) and raw else (raw or {})
             except ValueError:
@@ -172,20 +178,41 @@ class Agent:
                 if repeats >= MAX_REPEATS:
                     state.note("repeated again: leaving the loop")
                     return
+            elif name not in [t["function"]["name"] for t in schemas]:
+                result = {"ok": False, "error": "tool_not_available", "message": f"{name!r} is not available now."}
+                state.record_tool(name, args, result, ok=False, blocked=True)
+                bad_turns += 1
+            elif name == "cancel_leave_request" and not any(
+                    r.name == "list_my_requests" and r.ok for r in state.tool_records):
+                result = {"ok": False, "error": "list_first",
+                          "message": "Never guess a request id. Call list_my_requests first and use an id from it."}
+                state.record_tool(name, args, result, ok=False, blocked=True)
+                state.note("cancel before list_my_requests blocked")
+                bad_turns += 1
             else:
-                result = self._run_tool(state, name, args, route).result
-                bad_turns = 0 if result.get("ok") else bad_turns + 1
-                if bad_turns >= MAX_BAD_TOOL_TURNS:
-                    state.note("two failed tool calls in a row: leaving the loop")
-                    messages.append({"role": "tool", "tool_call_id": call.get("id", ""), "content": json.dumps(result)})
-                    return
+                before = len(state.passages)
+                out = self._run_tool(state, name, args, route)
+                result = out.result
+                if name == POLICY_TOOL and result.get("ok"):
+                    empty_searches = empty_searches + 1 if not state.passages else 0
+                    if (before and len(state.passages) == before) or empty_searches >= 2:
+                        state.note("search found nothing new: policy_search is no longer offered")
+                        schemas = [t for t in schemas if t["function"]["name"] != POLICY_TOOL]
+                        result = dict(result, note="policy_search is no longer available. Use the other tools, or reply DONE.")
+                else:
+                    bad_turns = 0 if result.get("ok") else bad_turns + 1
+            if bad_turns >= MAX_BAD_TOOL_TURNS:
+                state.note("two failed tool calls in a row: leaving the loop")
+                messages.append({"role": "tool", "tool_call_id": call.get("id", ""), "content": json.dumps(result)})
+                return
             messages.append({"role": "tool", "tool_call_id": call.get("id", ""),
                              "content": json.dumps(result, ensure_ascii=False)})
 
     # -- answer
     def _answer_prompt(self, state: AgentState) -> tuple[str, str, str]:
         """Render the answer prompt with as much material as fits. Returns (prompt, passages_text, tools_text)."""
-        hrms = [r.result for r in state.tool_records if r.ok and not r.blocked and r.name != POLICY_TOOL]
+        hrms = [f"{r.name}({json.dumps(r.args, ensure_ascii=False)}) -> {json.dumps(r.result, ensure_ascii=False)}"
+                for r in state.tool_records if not r.blocked and r.name != POLICY_TOOL]
         values = dict(self._common(state), plan=state.plan.model_dump_json())
         template = prompts.load("answer")
         fixed = template.render(**values, passages="", tool_results="")
@@ -214,7 +241,7 @@ class Agent:
     @staticmethod
     def _needs_citation(state: AgentState) -> bool:
         """An answer built only from the employee's own HR data (no passages) has nothing to cite."""
-        from_hrms = any(r.ok and not r.blocked and r.name != POLICY_TOOL for r in state.tool_records)
+        from_hrms = any(not r.blocked and r.name != POLICY_TOOL for r in state.tool_records)
         return not (from_hrms and not state.passages)
 
     def _problems(self, state: AgentState, final: FinalAnswer, sources: str) -> list[str]:
@@ -238,6 +265,12 @@ class Agent:
             return final
 
     def _check_and_revise(self, state, final, messages, sources) -> FinalAnswer:
+        if not self._needs_citation(state) and final.citations:  # HR data has no passage to cite
+            state.note("answer is from HR data only: citations dropped")
+            final = final.model_copy(update={"citations": []})
+        final, repaired = render.snap_quotes(final, state.passages)
+        if repaired:
+            state.note(f"{repaired} near-verbatim quote(s) replaced by the passage's own sentence")
         problems = self._problems(state, final, sources)
         if problems and not state.at_cap:
             final = self._revise(state, final, messages, problems, "checks")
@@ -288,8 +321,9 @@ class Agent:
                          for c in final.citations if c.passage_id in by_id]
             if final.behaviour in ("refuse_injection", "refuse_pii", "refuse_not_in_corpus"):
                 status = "refused"
-            if final.behaviour == "draft_for_confirmation" or any(
-                    r.name == "create_leave_draft" and r.ok and not r.blocked for r in state.tool_records):
+            done = lambda n: any(r.name == n and r.ok and not r.blocked for r in state.tool_records)  # noqa: E731
+            cancelled_only = done("cancel_leave_request") and not done("create_leave_draft")
+            if (final.behaviour == "draft_for_confirmation" and not cancelled_only) or done("create_leave_draft"):
                 status = "needs_confirmation"
         return AgentResponse(
             answer=answer, citations=citations,

@@ -165,13 +165,67 @@ def test_repeated_call_does_not_run_the_tool_again(monkeypatch):
 
 
 def test_step_cap_forces_the_answer(monkeypatch):
+    fresh = iter(Passage(doc_id=f"d{i}", chunk_id=f"n{i}", title="T", text=f"casual leave rule {i}") for i in range(20))
     searches = [tool_call("policy_search", {"query": f"casual leave {i}"}, f"c{i}") for i in range(6)]
-    script = Script(PLAN, *searches[:5], answer())
-    resp = ask(make_agent(script, monkeypatch))
-    assert "step_cap" in notes(resp) and resp.status == "answered"
-    assert len(resp.tool_calls) == 5
+    script = Script(PLAN, *searches[:5], REFUSE)
+    monkeypatch.setattr(orchestrator, "chat", script)
+    resp = ask(Agent(ToolBox(lambda q, k=5, filters=None: [next(fresh)])))
+    assert "step_cap" in notes(resp) and len(resp.tool_calls) == 5
     assert "critic" not in notes(resp)  # no steps left for the critic
     assert script.items == []
+
+
+def test_done_as_a_tool_call_ends_the_loop(monkeypatch):
+    script = Script(PLAN, SEARCH, tool_call("DONE", {}, "c2"), answer(), Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch))
+    assert [c["name"] for c in resp.tool_calls] == ["policy_search"] and resp.status == "answered"
+
+
+def test_search_that_adds_nothing_new_ends_the_loop(monkeypatch):
+    again = tool_call("policy_search", {"query": "leave casual"}, "c2")
+    script = Script(PLAN, SEARCH, again, answer(), Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch))
+    assert "nothing new" in notes(resp) and len(resp.tool_calls) == 2 and script.items == []
+
+
+def test_executor_sees_the_question_and_today(monkeypatch):
+    script = Script(PLAN, SEARCH, "DONE", answer(), Critique(verdict="ok"))
+    ask(make_agent(script, monkeypatch), "Apply for leave on 2 Dec 2026")
+    first_executor = script.calls[1]["messages"][1]["content"]
+    assert "Apply for leave on 2 Dec 2026" in first_executor and "2026-11-16" in first_executor
+
+
+def test_clarify_route_searches_once_so_the_options_can_be_named(monkeypatch):
+    clarify = FinalAnswer(behaviour="clarify", answer="Which leave type: casual or sick?")
+    script = Script(Plan(route="clarify", reason="r"), clarify, Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "How many casual leave days can I take?")
+    assert [c["name"] for c in resp.tool_calls] == ["policy_search"] and resp.status == "answered"
+    assert "[z-1]" in script.calls[1]["messages"][1]["content"]
+
+
+def test_answer_stage_sees_failed_hr_tool_results_with_names(monkeypatch):
+    bad = tool_call("create_leave_draft", {"leave_code": "CL", "start_date": "2020-01-01", "end_date": "2020-01-01"})
+    final = answer(behaviour="clarify", answer="That date is in the past.", citations=[])
+    script = Script(Plan(route="hrms", reason="r"), bad, "DONE", final, Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "Apply for leave on 1 Jan 2020")
+    prompt = script.calls[3]["messages"][1]["content"]
+    assert "create_leave_draft(" in prompt and resp.tool_calls[0]["error"]
+
+
+def test_hrms_only_answer_drops_model_citations_quietly(monkeypatch):
+    final = answer(answer="Your balances are listed in the HR system.",
+                   citations=[{"passage_id": "hr_tool_result", "quote": "available: 6.0"}])
+    script = Script(Plan(route="hrms", reason="r"), tool_call("get_leave_balance", {}), "DONE", final,
+                    Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "How many leave days do I have?")
+    assert resp.citations == [] and "revision" not in notes(resp) and "citations dropped" in notes(resp)
+
+
+def test_near_verbatim_quote_is_repaired_without_a_revision(monkeypatch):
+    near = answer(citations=[{"passage_id": "z-1", "quote": "Full-time employees get 12 casual days per year."}])
+    script = Script(PLAN, SEARCH, "DONE", near, Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch))
+    assert resp.citations[0].quote == QUOTE and "revision" not in notes(resp) and "replaced by" in notes(resp)
 
 
 def test_big_context_is_trimmed_to_fit_the_window(monkeypatch):
@@ -312,3 +366,58 @@ def test_answer_from_hr_data_alone_needs_no_citation(monkeypatch):
     script = Script(Plan(route="hrms", reason="r"), tool_call("get_leave_balance", {}), "DONE", final, Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch), "How many leave days do I have?")
     assert resp.status == "answered" and "revision" not in notes(resp)
+
+
+def test_cancel_with_a_guessed_id_is_blocked_until_requests_are_listed(monkeypatch):
+    plan = Plan(route="hrms", reason="r", steps=["cancel"])
+    script = Script(plan, tool_call("cancel_leave_request", {"request_id": 12345}, "c1"),
+                    tool_call("list_my_requests", {}, "c2"), "DONE", answer(answer="Your balance is shown in the HR system.", citations=[]),
+                    Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "Cancel my leave on 2 Dec")
+    names = [c["name"] for c in resp.tool_calls]
+    assert names == ["cancel_leave_request", "list_my_requests"]
+    assert resp.tool_calls[0]["error"] == "list_first" and "blocked" in notes(resp)
+
+
+def test_policy_search_is_withdrawn_so_hr_tools_still_run(monkeypatch):
+    plan = Plan(route="policy_and_hrms", reason="r", steps=["s"])
+    empty = lambda q, k=5, filters=None: []  # noqa: E731
+    script = Script(plan, tool_call("policy_search", {"query": "casual leave a"}, "c1"),
+                    tool_call("policy_search", {"query": "casual leave b"}, "c2"),
+                    tool_call("get_leave_balance", {}, "c3"), "DONE", answer(answer="Your balance is shown in the HR system.", citations=[]),
+                    Critique(verdict="ok"))
+    monkeypatch.setattr(orchestrator, "chat", script)
+    resp = ask(Agent(ToolBox(empty)), "Can I take 3 days of casual leave?")
+    assert [c["name"] for c in resp.tool_calls] == ["policy_search", "policy_search", "get_leave_balance"]
+    assert "no longer offered" in notes(resp)
+    offered = [t["function"]["name"] for t in script.calls[3]["tools"]]
+    assert "policy_search" not in offered and "get_leave_balance" in offered
+
+
+def test_nothing_new_search_on_a_mixed_route_keeps_the_hr_tools(monkeypatch):
+    plan = Plan(route="policy_and_hrms", reason="r", steps=["s"])
+    script = Script(plan, SEARCH, tool_call("policy_search", {"query": "leave casual"}, "c2"),
+                    tool_call("get_leave_balance", {}, "c3"), "DONE", answer(), Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch))
+    assert [c["name"] for c in resp.tool_calls] == ["policy_search", "policy_search", "get_leave_balance"]
+
+
+def test_cancel_is_answered_not_needs_confirmation(monkeypatch):
+    plan = Plan(route="hrms", reason="r", steps=["cancel"])
+    draft = tool_call("create_leave_draft", {"leave_code": "CL", "start_date": "2026-12-02", "end_date": "2026-12-02"}, "c1")
+    cancel = tool_call("cancel_leave_request", {"request_id": 1}, "c3")
+    final = answer(behaviour="draft_for_confirmation", answer="Your request was cancelled.", citations=[])
+    script = Script(plan, draft, tool_call("list_my_requests", {}, "c2"), cancel, "DONE", final, Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "Create a draft for casual leave on 2 Dec 2026, then cancel it")
+    assert resp.status == "needs_confirmation"  # a draft was created in the same turn
+
+
+def test_withdrawn_search_result_tells_the_model(monkeypatch):
+    plan = Plan(route="policy_and_hrms", reason="r", steps=["s"])
+    empty = lambda q, k=5, filters=None: []  # noqa: E731
+    script = Script(plan, tool_call("policy_search", {"query": "a"}, "c1"), tool_call("policy_search", {"query": "b"}, "c2"),
+                    "DONE", answer(behaviour="refuse_not_in_corpus", answer="Not found.", citations=[]), Critique(verdict="ok"))
+    monkeypatch.setattr(orchestrator, "chat", script)
+    ask(Agent(ToolBox(empty)))
+    last_tool = [m for m in script.calls[2]["messages"] if m.get("role") == "tool"][-1]
+    assert "no longer available" in last_tool["content"]

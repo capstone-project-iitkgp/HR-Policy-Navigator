@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from hr_navigator import prompts
 from hr_navigator.prompts import render, schemas
+from hr_navigator.prompts.schemas import FinalAnswer
 from hr_navigator.schemas import Passage
 
 P = [Passage(doc_id="DOC-1", chunk_id="c1", title="Leave", text="Full-time employees get 12 casual leave days per year."),
@@ -78,3 +79,35 @@ def test_unsupported_numbers_finds_invented_figures_only():
     src = "Casual leave is 12 days a year. Claims within 7 days."
     assert render.unsupported_numbers("You get 12 days, claim within 7.", src, "How many?") == []
     assert render.unsupported_numbers("You get 15 days and $50.", src) == ["15", "50"]
+
+
+# ---- snap_quotes and number matching (20 Nov, from the first real run) -------
+
+def test_unsupported_numbers_treats_6_and_6_0_as_equal():
+    assert render.unsupported_numbers("You have 6 days", '"available": 6.0') == []
+    assert render.unsupported_numbers("1000 rupees", "up to 1,000 rupees") == []
+    assert render.unsupported_numbers("7 days", '"available": 6.0') == ["7"]
+
+
+def _passage(text):
+    return Passage(doc_id="d", chunk_id="c1", text=text)
+
+
+def test_snap_quotes_repairs_one_changed_word():
+    p = _passage("Intro line. Employees who resign are expected to serve a notice period of one month. Other text.")
+    a = FinalAnswer(behaviour="answer", answer="x", citations=[
+        {"passage_id": "c1", "quote": "Employees who resign are expected to serve a notice of one month."}])
+    fixed, n = render.snap_quotes(a, [p])
+    assert n == 1 and render.check_citations(fixed, [p]) == []
+    assert fixed.citations[0].quote.startswith("Employees who resign")
+
+
+def test_snap_quotes_leaves_invented_and_exact_quotes_alone():
+    p = _passage("Employees get 12 casual leave days per year.")
+    exact = FinalAnswer(behaviour="answer", answer="x", citations=[{"passage_id": "c1", "quote": "12 casual leave days"}])
+    invented = FinalAnswer(behaviour="answer", answer="x", citations=[{"passage_id": "c1", "quote": "Everyone gets 40 sick days."}])
+    assert render.snap_quotes(exact, [p])[1] == 0
+    fixed, n = render.snap_quotes(invented, [p])
+    assert n == 0 and fixed.citations[0].quote == "Everyone gets 40 sick days."
+    unknown = FinalAnswer(behaviour="answer", answer="x", citations=[{"passage_id": "zz", "quote": "whatever"}])
+    assert render.snap_quotes(unknown, [p])[1] == 0

@@ -5,6 +5,7 @@ cannot guarantee it (the H3 baselines invented quotes when asked to cite)."""
 
 from __future__ import annotations
 
+import difflib
 import re
 
 from hr_navigator.prompts.schemas import FinalAnswer
@@ -44,10 +45,48 @@ def check_citations(answer: FinalAnswer, passages: list[Passage]) -> list[str]:
     return problems
 
 
+def _canon(num: str) -> str:
+    """6, 6.0 and 06 are the same number; so are 1,000 and 1000."""
+    try:
+        return f"{float(num.replace(',', '')):g}"
+    except ValueError:
+        return num
+
+
 def unsupported_numbers(answer_text: str, *sources: str) -> list[str]:
     """Digit strings in the answer that appear in none of the sources (passages, tool results, the question).
 
     A cheap code check for invented figures; it does not see number words ("seven"), so it is
     a floor, not a proof."""
-    seen = " ".join(_norm(s) for s in sources)
-    return sorted({n for n in re.findall(r"\d+(?:[.,]\d+)?", answer_text) if n not in re.findall(r"\d+(?:[.,]\d+)?", seen)})
+    pattern = r"\d+(?:[.,]\d+)?"
+    seen = {_canon(n) for n in re.findall(pattern, " ".join(_norm(s) for s in sources))}
+    return sorted({n for n in re.findall(pattern, answer_text) if _canon(n) not in seen})
+
+
+SNAP_MIN_RATIO = 0.85
+
+
+def snap_quotes(answer: FinalAnswer, passages: list[Passage]) -> tuple[FinalAnswer, int]:
+    """Replace a nearly-verbatim quote (a dropped or changed word) by the passage's own sentence.
+
+    The model often copies a long sentence with one word off. If a sentence (or two adjacent
+    sentences) of the cited passage matches at least 85%, the quote becomes that exact text, so
+    it verifies. Quotes that match nothing are left alone and fail the check as before.
+    Returns the answer and the number of quotes repaired."""
+    by_id = {p.chunk_id: p.text for p in passages}
+    fixed, citations = 0, []
+    for c in answer.citations:
+        text = by_id.get(c.passage_id)
+        if text is None or _norm(c.quote) in _norm(text):
+            citations.append(c)
+            continue
+        sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+        windows = sentences + [f"{a} {b}" for a, b in zip(sentences, sentences[1:])]
+        target = _norm(c.quote)
+        best = max(windows, key=lambda w: difflib.SequenceMatcher(None, target, _norm(w)).ratio(), default="")
+        if best and difflib.SequenceMatcher(None, target, _norm(best)).ratio() >= SNAP_MIN_RATIO:
+            citations.append(c.model_copy(update={"quote": best}))
+            fixed += 1
+        else:
+            citations.append(c)
+    return answer.model_copy(update={"citations": citations}), fixed
