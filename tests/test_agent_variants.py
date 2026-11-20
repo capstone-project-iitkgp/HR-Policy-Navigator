@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from evaluation import agent_variants, dev_run
@@ -70,8 +72,9 @@ def test_capacity_error_propagates_so_the_runner_stops(monkeypatch):
         VARIANTS["v3_agent"](ITEM, 0)
 
 
-def test_missing_retrieval_stops_the_run_with_a_clear_message():
+def test_missing_retrieval_stops_the_run_with_a_clear_message(monkeypatch):
     agent_variants.set_search(None)
+    monkeypatch.setitem(sys.modules, "hr_navigator.retrieval", None)  # retrieval exists now; hide it
     with pytest.raises(SystemExit, match="retrieval"):
         VARIANTS["v3_agent"](ITEM, 0)
 

@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ spec.loader.exec_module(ask)
 
 
 def test_dev_item_runs_end_to_end_with_trace(monkeypatch, capsys):
+    monkeypatch.setitem(sys.modules, "hr_navigator.retrieval", None)  # use the dev item's own passages
     monkeypatch.setattr(ask.config, "chat_endpoint", lambda: Endpoint("https://real.example/v1", "Qwen/Qwen3-8B", "k"))
     item = ask.json.loads(ask.DEV.read_text().splitlines()[0])
     passage = item["passages"][0]
