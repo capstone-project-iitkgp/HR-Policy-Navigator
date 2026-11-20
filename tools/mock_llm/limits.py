@@ -3,8 +3,8 @@
 Known (reported by the course, 16 Nov 2026): 1 concurrent request per key, 60
 requests/min, 8192 tokens input+output, 1024 max output tokens.
 
-UNVERIFIED guesses about *how* the real API enforces them (429 vs queue, clamp vs
-reject for max_tokens). The README documents this. Token counts here are an
+max_tokens above 1024 is rejected with HTTP 400 (verified 20 Nov). UNVERIFIED: whether a second
+concurrent request gets 429 or is queued. The README documents this. Token counts here are an
 estimate (characters / 4), not the model's tokenizer.
 """
 from __future__ import annotations
@@ -50,8 +50,9 @@ def apply_token_budget(body: dict[str, Any]) -> tuple[dict[str, Any], list[str],
         out_tokens = MAX_OUTPUT_TOKENS
         notes.append(f"max_tokens defaulted to {MAX_OUTPUT_TOKENS}")
     elif isinstance(requested, int) and requested > MAX_OUTPUT_TOKENS:
-        out_tokens = MAX_OUTPUT_TOKENS
-        notes.append(f"max_tokens clamped {requested}->{MAX_OUTPUT_TOKENS}")
+        # Verified on the real API (probe, 20 Nov): above the cap it answers HTTP 400, it does not clamp.
+        return body, notes, Rejection(400, "invalid_request_error",
+                                      f"output token limit must be between 1 and {MAX_OUTPUT_TOKENS}")
     else:
         out_tokens = requested
     if not isinstance(out_tokens, int) or out_tokens < 1:

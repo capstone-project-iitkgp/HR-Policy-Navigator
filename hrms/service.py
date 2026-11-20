@@ -549,3 +549,23 @@ def decide_request(actor_id, request_id, decision, note=None):
         return _ok(request_id=req["id"], status=new_status, employee_id=owner["emp_id"])
 
     return _run("decide_request", actor_id, {"request_id": request_id, "decision": decision}, body)
+
+
+# --- escalation -----------------------------------------------------------
+ESCALATION_SUMMARY_MAX = 200
+
+
+def escalate_to_hr(actor_id, topic, summary):
+    """Record a hand-over to HR in the audit log and return a reference plus the HR contact for the
+    employee's organisation. Nothing is sent anywhere. Called by the agent's code after a refusal or
+    an escalation, never offered to the language model."""
+    summary = " ".join(str(summary or "").split())[:ESCALATION_SUMMARY_MAX]
+
+    def body(conn, actor):
+        # the audit row is written right after this body, so its id is the next one
+        next_id = conn.execute("SELECT COALESCE(MAX(id), 0) + 1 FROM audit_log").fetchone()[0]
+        return _ok(reference="ESC-%d" % next_id, topic=str(topic), summary=summary,
+                   contact=rules.HR_CONTACT.get(actor["policy_org"], "your HR team"),
+                   note="Nothing was sent; this is a note in the audit log for HR.")
+
+    return _run("escalate_to_hr", actor_id, {"topic": str(topic), "summary": summary}, body)

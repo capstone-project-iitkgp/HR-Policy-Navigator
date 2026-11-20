@@ -26,6 +26,10 @@ data/processed/**
 hrms/*.db
 hrms/*.db-journal
 
+# LLM response and embedding caches, probe output
+.cache/
+probe_report.json
+
 # Local indexes
 .chroma/
 qdrant_storage/

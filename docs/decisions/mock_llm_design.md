@@ -16,8 +16,8 @@ A small proxy in front of a local OpenAI-compatible backend (LM Studio first; Ol
 A scripted or canned mode was considered and rejected for now. Tests that need no model use their own fakes, as `tools/mock_llm/tests` does with an in-process backend. A scripted mode can be added later if fault-injection tests become important.
 
 ## Assumptions (UNVERIFIED against the real API)
-- A second concurrent request returns 429 (it could instead queue). `--queue` switches this.
-- `max_tokens` above 1024 is clamped (it could instead be rejected).
+- A second concurrent request returns 429 (it could instead queue). `--queue` switches this. VERIFIED 20 Nov: the real API returns 429 (`per-key concurrent request limit exceeded`), so the default is right. The real API sends no `Retry-After` header; the mock does, so the client's fixed backoff is what runs against the real endpoint.
+- ~~`max_tokens` above 1024 is clamped~~: VERIFIED 20 Nov that the real API rejects it with HTTP 400; the mock now does the same.
 - No embeddings endpoint. The 13 Nov embedding email may change this.
 - Prompt size is estimated as characters / 4.
 Re-check these in mentor session #2 or with a smoke test, then update `limits.py` and the README table.

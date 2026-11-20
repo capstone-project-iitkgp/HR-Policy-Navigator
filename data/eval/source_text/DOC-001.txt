@@ -1,0 +1,1449 @@
+                                             Travel & Expenses (T&E) Policy
+
+Contents
+     Version Control ............................................................................................................................ 2
+     Contact for Queries ...................................................................................................................... 2
+1.      Purpose and Scope ................................................................................................................. 2
+     1.1 Purpose .................................................................................................................................. 2
+     1.2 Core Principles ....................................................................................................................... 2
+     1.3 Internal and External Funding (GL codes vs project codes) ....................................................... 3
+     1.4 Scope ..................................................................................................................................... 3
+     1.5 Transnational Education (TNE) ................................................................................................ 5
+     1.6 Equality, Diversity, and Inclusion (EDI) ..................................................................................... 5
+2.      Policy for Compliant and Non-Compliant Travel and Expenses ............................................ 6
+     2.1 Accommodation ..................................................................................................................... 6
+     2.2 Air Travel ................................................................................................................................ 7
+     2.3 Rail......................................................................................................................................... 8
+     2.4 Vehicle Mileage or Hire............................................................................................................ 9
+     2.5 Other Modes of Transport...................................................................................................... 10
+     2.6 Travel-Related Costs............................................................................................................. 11
+     2.7 Subsistence (Food & Drink) ................................................................................................... 13
+     2.8 Hospitality and Meeting Costs ............................................................................................... 14
+     2.9 Non-Travel Costs .................................................................................................................. 15
+3.      Travel and Expenses Guidelines........................................................................................... 19
+     3.1 Requests for Travel or Expenditure ........................................................................................ 19
+     3.2 Advance Payments ............................................................................................................... 20
+     3.3 Travel: Pre-Booking Guidance ............................................................................................... 20
+     3.4 Expense Claims .................................................................................................................... 23
+     3.5 Compliance and Exceptions .................................................................................................. 24
+4.      Roles and Responsibilities ................................................................................................... 25
+5. Monitoring and Review.......................................................................................................... 27
+6. Related Policies and Procedures .......................................................................................... 27
+7. Reference .............................................................................................................................. 28
+     Appendix A: Cities Eligible for the Higher Accommodation Rate ................................................... 28
+     Appendix B: Countries Eligible for the Higher Subsistence Rate .................................................... 29
+
+
+                                                                           1
+Version Control
+ Version    UEB Sponsor                                       Approval Body/Officer              Date of
+ Number                                                                                          approval
+    2       Darren Xiberras: Chief Financial Officer (CFO)    University Executive Board (UEB)   18/12/25
+
+Contact for Queries
+For queries on this policy, please contact: travel-bookings@cardiff.ac.uk
+
+1. Purpose and Scope
+1.1 Purpose
+This document outlines the University’s policy on expenditure and reimbursement for travel and other
+expenses incurred during university business. Any items not explicitly mentioned in this document are
+considered non-allowable.
+
+Adherence to this policy ensures compliance with HMRC regulations, helping to prevent additional tax
+or National Insurance liabilities for both individuals and the University. It also supports compliance
+with audit requirements for both internal and external funding.
+
+This policy supplements the University’s Financial Regulations. In the event of any conflict between
+this policy and the Financial Regulations, the Financial Regulations will take precedence.
+
+1.2 Core Principles
+The core principles of this Travel and Expenses Policy are:
+
+   •   Integrity and Compliance: All expenditure and reimbursement claims must relate solely to
+       university business. Users are expected to act in line with the spirit of the policy and uphold its
+       standards.
+
+   •   Value for Money: Resources must be used economically and effectively to support business
+       objectives. Considerations of well-being, safety, and security are part of value for money. If
+       policy limits are restrictive, appropriate evidence must justify the necessity of the expense
+       (see section 3.1.3: Additional Approvals).
+
+   •   Duty of Care: Safety, well-being, and security are essential, especially during travel. Travel
+       arrangements must reflect these priorities, including accommodation location and transport
+       mode.
+
+   •   Financial Control and Budget Management: All travel and expenses should be approved in
+       advance. Where possible, bookings should be made at least eight weeks before the funding
+       stream closes to allow for invoice processing. If travel is booked within this period, pre-paid
+       accommodation should be used, when available. Expense claims and reconciliations should
+       be submitted within 60 days of expenditure date, to support budget oversight.
+
+   •   Sustainability: The University is committed to achieving carbon neutrality by 2030. Travel
+       decisions must consider environmental impact. Remote meetings should be used where
+       feasible. If travel is essential, choose lower-emission options where the cost, time, or well-
+       being impact is reasonable.
+
+
+                                                     2
+    •   Audit Requirements: Adherence to this policy ensures accurate records for effective internal
+        and external audits.
+
+    •   Transparency and Public Interest: As a public authority, the University complies with the
+        Freedom of Information Act 2000 and the Environmental Information Regulations 2004.
+        Consideration must be given to public perception when planning travel and submitting
+        expenses.
+
+1.3 Internal and External Funding (GL codes vs project codes)
+When Cardiff University administers external funding (project codes), this policy serves as the primary
+compliance framework. If the external funder's policy is more restrictive, and an expense claim is
+made for the difference between their allowance and the University's policy, the Request must
+include:
+
+    •   An alternative budget code to charge the difference.
+    •   Financial approval from the relevant Financial Approver.
+
+For further guidance on external funding (project codes), contact the Research team.
+
+1.4 Scope
+1.4.1 Individuals within the scope of this policy
+This policy applies to the following categories of individuals:
+
+  Person Type                     Description
+  Staff                           Individuals contracted to work at Cardiff University. This includes,
+                                  but is not limited to:
+                                      • salaried staff
+                                      • casual workers
+                                      • members of the University Executive Board (UEB).
+
+  Student                         Individuals who are enrolled at Cardiff University. This includes,
+                                  but is not limited to:
+                                      • undergraduate (UG) students
+                                      • postgraduate taught (PGT) students
+                                      • postgraduate research (PGR) students
+
+  Visitor                         Individuals who are external to Cardiff University, meaning those
+                                  not on the University payroll and not registered as students. This
+                                  includes, but is not limited to:
+                                      • honorary fellows
+                                      • honorary doctorate holders
+                                      • honorary staff
+                                      • independent members of University Council or
+                                          Committees
+                                      • collaborators supporting University business or research
+                                      • temporary staff (paid by an agency, not Cardiff University)
+
+
+
+
+                                                     3
+  Person Type                    Description
+  Participants or public         Individuals participating in studies, trials, or experiments,
+  contributors (travel           excluding those involved in a professional or academic capacity.
+  bookings only)
+
+1.4.2 Individuals outside the scope of this policy
+The following are outside the scope of this policy and may be subject to alternative rates and rules:
+
+  Out of scope                                  Further information
+  Students undertaking mandatory or             Refer to the guidance provided by the relevant
+  curriculum-integrated placements              School or Department for each placement.
+  (travel bookings and expense claims)
+
+  Relocation expenses, including entry          Refer to the Relocation Policy (HR) for further
+  visas, permits, and the Immigration Health    guidance or the Accounts Payable (AP) team for
+  Surcharge (IHS)                               student scholarships/bursaries.
+
+
+  Interview expenses                            Rates and regulations are outlined in the candidate
+                                                expense claim form (HR), available on Cardiff
+                                                University's public website.
+
+  Participants and public contributors          Participant payments, including any applicable
+  (participation payments or expense            expense reimbursements, must be processed
+  claims)                                       through the Accounts Payable (AP) team.
+
+                                                Note: These payments or expense claims apply
+                                                exclusively to individuals participating in studies,
+                                                trials, or experiments, excluding those involved in a
+                                                professional or academic capacity.
+
+                                                Travel bookings may still be arranged through the
+                                                Travel and Expenses (T&E) team.
+
+  External Examiners or Invigilators            Individuals who are external to Cardiff University
+  (travel bookings, expense claims and fees)    who are engaged in roles as external examiners or
+                                                invigilators.
+
+                                                Expense claims and fees for External Examiners
+                                                and Invigilators must be processed through the
+                                                External Examiners team in the Registry
+                                                department.
+
+                                                Travel bookings for External Examiners or
+                                                Invigilators cannot be booked through the Travel &
+                                                Expenses team and must be booked by the
+                                                individual and then claimed back though the
+                                                External Examiners team.
+
+
+
+
+                                                     4
+  Out of scope                                   Further information
+  Honoraria or ex-gratia payments, such as       Honoraria or ex-gratia payments must be
+  one-off goodwill payments to guest             processed through the Accounts Payable (AP)
+  speakers                                       team.
+
+  Note: Honoraria or ex-gratia payments          Travel bookings for those in receipt of Honoraria or
+  must be one-off in nature, with tax            ex-gratia payments can still be arranged through
+  implications carefully considered              the Travel and Expenses (T&E) team.
+
+  CU staff or students receiving expense         Travel must still be approved in advance and
+  reimbursements from third-party                recorded with the Travel and Expenses team. Refer
+  organisations for university-related           to section 3.3.5: Travel Considerations for further
+  business                                       details.
+
+  External contractors where the travel          External contractors who charge a fee for their
+  costs, expenses, and fees are charged to       services (usually by invoice) must comply with
+  the University as part of their service        Cardiff University's Procurement Policy and
+  provision                                      Procedures.
+
+
+1.5 Transnational Education (TNE)
+All travel to Transnational Education (TNE) sites must comply with this Travel & Expenses policy. If
+specific destinations have different rules, those will take precedence, along with any required
+alternative processes. If you are unsure, please contact the Travel & Expenses team for guidance.
+
+1.6 Equality, Diversity, and Inclusion (EDI)
+This policy reflects the University's commitment to equality, diversity, and inclusion.
+
+In accordance with the Equality Act 2010, the University will consider requests for reasonable
+adjustments related to disability. If a request falls outside the normal provisions of this policy,
+individuals are not required to share detailed personal information with the Travel & Expenses team.
+Instead, confirmation of the required adjustment may be provided via a supporting email from a local
+HR representative, line manager, or a designated contact within the Student Support and Wellbeing
+Division.
+
+Requests for other support adjustments (not related to disability), based on broader EDI
+commitments, must be reviewed and approved by the Head of School or Department, in consultation
+with relevant stakeholders, where appropriate. These may include circumstances such as
+accompanied travel due to caring responsibilities or religious observance, adjustments for temporary
+health conditions, or welfare-related support needs.
+
+To ensure consistency and reduce the risk of indirect discrimination, the Head of School or
+Department may refer to the supporting guidance developed by the EDI team when reviewing such
+requests. Once approved, written confirmation must be sent to the Travel & Expenses team before
+any bookings are made or costs incurred. Care should be taken to not share detailed personal
+information that isn’t necessary for the travel booking or expenses reimbursement process.
+
+
+
+
+                                                    5
+2. Policy for Compliant and Non-Compliant Travel and Expenses
+The tables below outline which travel and expense items are eligible or ineligible for booking or
+reimbursement through the approved Travel & Expense processes (SAP Concur and non-SAP Concur).
+These tables should be referenced when raising a Request, prior to making any travel bookings, and/or
+prior to incurring any business-related expenditure and submitting an expense claim, to ensure
+compliance with the policy.
+
+   Allowable Key                                    Explanation
+        Yes          Allowable provided that any conditions in the ‘Criteria’ section are met
+        No           Not allowable
+
+2.1 Accommodation
+  Type               Allowable     Criteria (if applicable)
+  Accommodation      Yes           Maximum Nightly Accommodation Rates
+
+                                   The following are the maximum allowable nightly
+                                   accommodation rates for UK and overseas travel (single
+                                   occupancy, including breakfast):
+
+                                       •   Standard Rate: £145
+                                       •   Higher Rate: £210 - Refer to Appendix A: ‘Cities Eligible
+                                           for the Higher Accommodation Rate’
+
+                                   These rates represent the maximum permitted and should not
+                                   be treated as target costs.
+
+                                   Types of Accommodation
+                                   Non-hotel accommodation (e.g., apartments, B&Bs, hostels)
+                                   may be booked if more suitable for your needs, see section
+                                   3.3.2: Travel Safety and Risk Management.
+
+                                   Considerations for Accommodation
+
+                                   Conference Accommodation
+                                   Bookings at the venue of a conference, meeting or event are
+                                   subject to the same rules and rates outlined above.
+
+                                   Accommodation in Cardiff (or contracted work location)
+                                   The cost of overnight accommodation at a staff member’s
+                                   contracted place(s) of work is not an allowable expense, as it is
+                                   considered a taxable benefit by HMRC.
+
+                                   For most staff, this means overnight accommodation in Cardiff
+                                   is not permitted (even if externally funded). However, if a staff
+                                   member’s contractual place of work is elsewhere or
+                                   designated as 'remote,' accommodation in Cardiff is allowed,
+                                   but not in the location of their usual place(s) of work.
+
+
+
+
+                                                 6
+  Type                Allowable   Criteria (if applicable)
+                                  Staying with Family or Friends
+                                  If you choose to stay with family or friends instead of booking a
+                                  hotel or other accommodation, no payment or gesture of
+                                  thanks can be claimed. HMRC considers this a taxable benefit,
+                                  and therefore it is not an allowable expense.
+
+                                  Optional extras
+                                  Optional extras such as early check-in, late check-out and
+                                  room upgrades are not allowable expenses.
+
+                                  Tips Related to Accommodation
+                                  Tips paid to accommodation staff (e.g. porters, housekeeping,
+                                  etc.) are not allowable expenses.
+
+
+  Breakfast           Yes         Where possible, breakfast should be included in the hotel
+  Allowance (If not               booking. However, if it is not included, a separate expense
+  included in room                claim may be submitted. The combined cost of the room and
+  rate)                           breakfast should not exceed the maximum nightly
+                                  Accommodation rates (see above).
+
+
+
+
+2.2 Air Travel
+
+
+  Type                Allowable   Criteria (if applicable)
+  Air Travel (9       Yes         For flight journeys where the total time spent in the air
+  hours or under)                 (excluding layovers or ground transit) is 9 hours or under, all
+                                  travel must be booked in economy class.
+
+                                  A flight journey is defined as the total time spent in
+                                  the air, from the initial departure point to the final destination.
+                                  This includes the full outbound or inbound trip for CU business
+                                  but excludes any layover(s) or time spent on the ground
+                                  between connecting flights.
+
+                                  Optional extras:
+                                  Additional costs such as seat selection, priority boarding,
+                                  security fast track, class upgrades and personal excess
+                                  baggage (e.g. for personal leave) cannot be booked or claimed.
+
+                                  Note: low-cost carrier bundles that include cabin luggage (e.g.,
+                                  easyJet Standard Plus fares) are allowable, even if they include
+                                  seat selection or priority boarding, etc.
+
+
+
+
+                                                 7
+  Type                 Allowable    Criteria (if applicable)
+  Air Travel (over 9   Yes          For flight journeys where the total time spent in the air
+  hours)                            (excluding layovers or ground transit) is over 9 hours,
+                                    employees may choose one of the following options:
+
+                                            •   Option 1: Book in economy class.
+                                            •   Option 2: Book in economy class and include the
+                                                cost of seat selection.
+                                            •   Option 3: Book in premium economy (where
+                                                available), alternatively business class is permitted.
+                                                First class travel is not permitted.
+
+                                    A flight journey is defined as the total time spent in the air, from
+                                    the initial departure point to the final destination. This includes
+                                    the full outbound or inbound trip for CU business, but excludes
+                                    any layovers or time spent on the ground between connecting
+                                    flights.
+
+                                    Note: When booking flights, if the outbound journey is over 9
+                                    hours but the inbound journey is under (or vice versa) then both
+                                    journeys will qualify for the above options, however the related
+                                    flights must be booked at the same time.
+
+  Airport Lounge       Yes          Lounge access is permitted if spending over three hours at an
+                                    airport (due to delays, layovers etc.), with a maximum
+                                    allowance of £40 per instance.
+
+  Seat Selection       Yes          Seat selection is allowable on flights where the total time spent
+  (in-air time of                   in the air is over 9 hours (see: Air Travel (over 9 hours)).
+  over 9 hours
+  only)
+
+
+2.3 Rail
+  Type              Allowable      Criteria (if applicable)
+  Rail (UK or       Yes            First class travel is not permitted.
+  Overseas)
+  Underground,      Yes
+  Metro, Trams,
+  Subways
+
+  Railcards         Yes            Railcards may be used when purchasing tickets; however, the
+                                   University can only reimburse the cost of a railcard for certain
+                                   individuals:
+
+                                       •   Staff: No - due to HMRC implications.
+                                       •   Students: Yes – if savings can be evidenced.
+                                       •   Visitors: No – as the railcard would not be used wholly
+                                           and exclusively for Cardiff University business.
+
+
+
+                                                    8
+2.4 Vehicle Mileage or Hire
+ Type             Allowable   Criteria (if applicable)
+ Personal         Yes         Car Mileage (Petrol, Diesel, or Electric Vehicles)
+ Vehicle                          • 55p per mile – up to 10,000 miles (per HMRC tax year)
+ Mileage                          • 25p per mile – over 10,000 miles (per HMRC tax year)
+                                  • 5p per mile – per additional business-related passenger
+                                      (names must be provided)
+
+                              Motorcycle Mileage
+                                 • 24p per mile
+
+                              Bicycle Mileage:
+                                 • 20p per mile
+
+                              To use your own vehicle for business travel, you must ensure that
+                              you have the relevant business insurance independently, prior to
+                              travel. The cost of amending your personal motor insurance policy
+                              is not reimbursable, as this is already included in the mileage
+                              allowance rates.
+
+                              Commuting
+                              Commuting (travel between home and your designated place(s) of
+                              work, as specified in your contract) is not an allowable expense,
+                              as it is considered a taxable benefit by HMRC.
+
+                              For most staff, this means travel between home and Cardiff is not
+                              permissible. However, if your contractual place of work is
+                              elsewhere or designated as 'remote,' travel between home and
+                              Cardiff would be allowable but travel between home and your
+                              usual place(s) of work would not. Claiming travel to the office on a
+                              day you typically work from home is also not allowable, as the
+                              office remains your contracted place of work.
+
+                              Mileage cannot be claimed for journeys considered ‘substantially
+                              ordinary commuting’, meaning they are in the same direction and
+                              approximately the same length (within 10 miles) as your commute
+                              to your contracted place of work.
+
+                              If you pass your normal workplace while travelling elsewhere but
+                              do not stop, or only make an incidental stop, mileage can be
+                              claimed for the entire journey, unless it qualifies as substantially
+                              ordinary commuting, as described above.
+
+ Vehicles Hired   No          All vehicles hired in the UK must be booked through the Travel,
+ in the UK                    Transport and Parking team, in accordance with the University’s
+                              Driving at Work Policy and guidance.
+
+                              Vehicles hired for university business must not be used for any
+                              personal mileage, as this would be considered a taxable
+                              benefit by HMRC.
+
+
+
+                                               9
+ Type             Allowable   Criteria (if applicable)
+                              To comply with HMRC regulations and demonstrate that there was
+                              no personal use, mileage logs must be completed and submitted
+                              for all vehicles hired for business purposes.
+
+ Vehicles Hired   Yes         Vehicles hired overseas can be booked and claimed back, as
+ Overseas                     these cannot be arranged by the Travel, Transport and Parking
+                              team.
+
+                              Business insurance should be obtained and claimed for by the
+                              driver(s), as vehicles hired overseas are not covered by the
+                              University’s insurance policy.
+
+                              Vehicles hired for university business, including those hired
+                              overseas, must not be used for any personal mileage, as this
+                              would be considered a taxable benefit by HMRC.
+
+                              To comply with HMRC regulations and demonstrate that there was
+                              no personal use, mileage logs must be completed and submitted
+                              for all vehicles hired overseas for business purposes, before the
+                              hire costs can be reimbursed.
+
+ Fuel Costs -     Yes
+ Vehicles Hired
+ in the UK or
+ Overseas
+ Insurance -      Yes         Business insurance should be obtained and claimed for by the
+ Vehicles Hired               driver(s), as vehicles hired overseas are not covered by the
+ Overseas                     University’s insurance policy.
+
+
+2.5 Other Modes of Transport
+  Type               Allowable     Criteria (if applicable)
+  Ferry Tickets      Yes
+
+
+  Ferry Cabins       Yes           An on-board cabin may be booked if the crossing exceeds
+                                   six hours.
+
+  Bike or E-bike Hire Yes          E-scooters must not be hired, as they are not covered by the
+                                   University’s insurance.
+
+  Taxi               Yes           Where possible public transport should be prioritised, but
+                                   taxis can be used if necessary.
+
+                                   Be aware that for expenses claimed against external
+                                   funding, justification for why public transport was not
+                                   appropriate will be required.
+
+                                   Tips paid to taxi drivers or companies cannot be claimed.
+
+
+
+                                              10
+  Type                  Allowable    Criteria (if applicable)
+  Public Bus and        Yes
+  Coach Tickets
+
+  Private Coach or      No           All private coach or minibus services that include driver(s)
+  Minibus and                        must be booked in accordance with the University’s
+  Driver Hire                        Procurement Policy and Procedures.
+
+
+2.6 Travel-Related Costs
+  Type                   Allowable   Criteria (if applicable)
+  Accompanied            Yes         Accompanied travel may be permitted as a reasonable
+  Travel (e.g.                       adjustment or support adjustment - see section 1.6:
+  Chaperones,                        Equality, Diversity and Inclusion for further information
+  Carers etc.)                       about when this may be appropriate. If approved, the
+                                     companion is subject to the same rates and provisions as
+                                     set out in this document.
+
+                                     Before adding accompanied travel to your Request, please
+                                     refer to the Accompanied Travel Request form, which
+                                     outlines the necessary steps to obtain the required
+                                     approvals.
+
+                                     Once approved, the approval trail must be attached to your
+                                     Request. Care should be taken to not share detailed
+                                     personal information that isn’t necessary for the travel
+                                     booking or expenses reimbursement process.
+
+
+  Parking                Yes         As standard, parking costs at your normal contracted
+                                     building(s) are not allowable.
+
+                                     One-off parking charges at other campus locations may be
+                                     claimed when business needs require attendance.
+
+                                     Premium parking options are not allowable expenses (e.g.
+                                     ‘meet and greet’ parking, valet parking etc.).
+
+  Toll, Congestion,      Yes
+  Clean Air Charges
+
+  Parking and Driving    No          Expense claims for parking or driving fines, including any
+  Fines                              additional administrative fees incurred, will not be
+                                     reimbursed under any circumstances.
+
+  Speeding Fines         No          Expense claims for speeding fines, including any additional
+                                     administrative fees incurred, will not be reimbursed under
+                                     any circumstances.
+  Tourist Taxes          Yes         This includes fees imposed by the destination country or
+  (including City                    resort, such as resort fees or tourist/city taxes (usually
+  Taxes)                             payable locally).
+
+
+                                                11
+Type                 Allowable   Criteria (if applicable)
+Travel Visas         Yes         Travel visas (including ETAs, ESTAs, etc.) should be arranged
+(Including ETAs                  directly through the relevant country’s online immigration
+etc.)                            service, or via the Travel Management Company (or partner
+                                 company CIBT), if assistance is needed (administration fees
+                                 may apply). See section 3.3.5: Travel Considerations.
+
+                                 Note: This policy does not cover visas (or work permits)
+                                 related to recruitment, relocation, or for working in your
+                                 contracted place of work (e.g. IHS costs would be covered
+                                 by HR policies and processes).
+
+Location-Specific    Yes         Supporting evidence may be required to confirm that these
+Vaccinations or                  costs are necessary for your destination(s), see section
+Medications                      3.3.2: Travel Safety and Risk Management.
+
+
+Foreign Currency     Yes         Foreign currency transaction charges can be claimed with
+Transaction                      relevant evidence (e.g., a redacted bank or card statement).
+Charge(s)
+                                 Cash withdrawal fees can be claimed, if required, but must
+                                 be submitted alongside the related purchases. Cash
+                                 withdrawn cannot be claimed, only the expenditure that the
+                                 cash was spent on.
+
+Additional Travel    Yes         If the University’s travel insurance does not cover a specific
+Insurance                        requirement, additional costs to enhance the policy may be
+                                 reimbursable, provided this is approved by the Insurance
+                                 team.
+
+                                 Please consult the Insurance Team for clarification before
+                                 making any arrangements, or incurring any costs, and attach
+                                 their approval to the Request or expense claim.
+
+Other CU Allowable   Yes         Costs that can be claimed under this type are:
+Travel Expenses
+                                    •   Wi-Fi and internet access – provided it is required
+                                        for business use. Free Wi-Fi services should be
+                                        prioritised where possible.
+                                    •   Overseas SIM cards/e-SIMs – to avoid roaming
+                                        charges while travelling (note: handsets for e-SIMs
+                                        cannot be claimed).
+                                    •   One-off charges for personal mobile phone use –
+                                        for urgent business-related matters while travelling,
+                                        with appropriate justification.
+
+
+
+
+                                            12
+2.7 Subsistence (Food & Drink)
+  Type               Allowable   Criteria (if applicable)
+  Subsistence - 6    Yes         When on business travel away from your home or contracted
+  hours to 9 hours               place(s) of work for at least 6 hours and up to 9 hours,
+                                 subsistence (food and drink) can be claimed up to the
+                                 maximum expenditure level of:
+
+                                 6 hours to 9 hours – £25
+
+                                 This rate is inclusive of any service charges or tips, provided
+                                 that these are shown on the receipt(s). Be aware that for
+                                 expenses claimed against external funding, further restrictions
+                                 on these costs may apply.
+                                 This rate can include alcohol, provided that this is in line with
+                                 the University’s Alcohol and Drug Misuse Policy. Be aware that
+                                 for expenses claimed against external funding, further
+                                 restrictions on these costs may apply.
+
+                                 No subsistence can be claimed if away from home or your
+                                 contracted place(s) of work for under 6 hours.
+
+                                 Subsistence cannot be claimed in the location of your home or
+                                 contracted place(s) of work (e.g., for most staff, Cardiff), as this
+                                 would be considered a taxable benefit by HMRC.
+
+                                 Takeaway food or drink intended for consumption while
+                                 travelling (e.g., a sandwich to eat on a train during a business
+                                 journey) can be claimed if bought in these locations, however
+                                 food or drink purchased at the end of a journey in these
+                                 locations is not claimable.
+
+  Subsistence –      Yes         When on business travel away from your home or contracted
+  Over 9 hours to                place(s) of work for over 9 hours, daily subsistence (food and
+  24 hours                       drink) for UK and overseas travel will be reimbursed up to the
+                                 maximum expenditure level of:
+
+                                 Over 9 hours – 24 hours
+
+                                     •   Standard rate: £45 (Or local currency equivalent)
+                                     •   Higher rate: £65 (Or local currency equivalent)
+                                         See Appendix B ‘Countries Eligible for the Higher
+                                         Subsistence Rate’.
+
+                                 This rate is inclusive of any service charges or tips, provided
+                                 that these are shown on the receipt(s). Be aware that for
+                                 expenses claimed against external funding, further restrictions
+                                 on these costs may apply.
+
+                                 This rate can include alcohol, provided that this is in line with
+                                 the University’s Alcohol and Drug Misuse Policy.
+                                 Be aware that for expenses claimed against external funding,
+                                 further restrictions on these costs may apply.
+
+
+                                                13
+  Type            Allowable   Criteria (if applicable)
+                              Subsistence cannot be claimed in the location of your home or
+                              contracted place(s) of work (e.g., for most staff, Cardiff), as this
+                              would be considered a taxable benefit by HMRC.
+
+                              Takeaway food or drink intended for consumption while
+                              travelling (e.g., a sandwich to eat on a train during a business
+                              journey) can be claimed if bought in these locations, however
+                              food or drink purchased at the end of a journey in these
+                              locations is not claimable.
+
+                              Where appropriate, a grocery shop for multiple days is
+                              allowable, provided the total spend does not exceed the overall
+                              allowance. This means the total cost must not exceed the
+                              number of days multiplied by the applicable daily allowance.
+
+
+2.8 Hospitality and Meeting Costs
+  Type            Allowable    Criteria (if applicable)
+  External        Yes          Hospitality may be extended to external guests for valid
+  Guest(s) -                   business purposes during scheduled events or meetings.
+  Hospitality
+                               Up to £45 per person can be claimed for food and drink for
+                               the host, external guests, and CU staff or students, according
+                               to the following ratios:
+
+                               Maximum Allowable Ratios
+                                  • University venues: 3 CU employees or CU students to
+                                    each external business guest
+                                  • External venues: 2 CU employees or CU students to
+                                    each external business guest
+
+                               The above rate is inclusive of any service charges or tips,
+                               provided that these are shown on the receipt(s). Be aware that
+                               for expenses claimed against external funding, further
+                               restrictions on these costs may apply.
+
+                               This rate can include alcohol, provided that this is in line with
+                               the University’s Alcohol and Drug Misuse Policy. Be aware that
+                               for expenses claimed against external funding, further
+                               restrictions on these costs may apply.
+
+                               The claim must include the names and roles of all attendees,
+                               along with the business reason for the hospitality, in order to
+                               comply with HMRC regulations.
+
+
+
+
+                                             14
+  Type                Allowable    Criteria (if applicable)
+  University Event    Yes          UEB will determine the University's position on funding
+  Contribution                     seasonal social events at the beginning of each academic
+                                   year.
+
+                                   This decision, which will be communicated University-wide,
+                                   will be guided by HMRC regulations and the prevailing
+                                   financial context to ensure consistency across all
+                                   departments.
+
+                                   Other staff hospitality, activities, or entertainment for purely
+                                   social purposes cannot be reimbursed, as these would be
+                                   considered a taxable benefit by HMRC.
+
+  Student Social      No           Costs related to student-related events cannot be claimed as
+  Functions                        expenses. Event costs must be arranged in accordance with
+                                   the University Procurement Policy and Procedures.
+
+
+  Internal            No           Costs related to internal meetings cannot be claimed as
+  Meetings                         expenses. Meeting costs must be arranged in accordance with
+                                   the University Catering and University Procurement Policy and
+                                   Procedures.
+
+  External            No           Costs related to external meetings, conferences, and events
+  Meetings,                        (e.g. venue hire, catering, equipment) cannot be claimed as
+  Conferences                      expenses.
+  and Event
+  Arrangements                     Hosting arrangements for meetings, conferences, and events
+  (e.g. venue hire,                must be made through the University Conferences team and
+  catering,                        in accordance with the University Procurement Policy and
+  equipment)                       Procedures.
+
+  General Office      No           General office refreshments (e.g., tea, coffee, milk, sugar,
+  Refreshments                     biscuits, etc.) for staff are considered personal expenses and
+                                   should not be charged to the University.
+
+                                   Refreshments for visitors and external study participants must
+                                   be arranged in accordance with University Catering
+                                   procedures.
+
+
+2.9 Non-Travel Costs
+  Topic               Allowable   Criteria (if applicable)
+  Conference and      Yes         If membership to a society or organisation is required in order
+  Training Fees                   to attend a conference, meeting or training course, this can be
+                                  claimed as part of the booking, as long as no benefits outside of
+                                  attendance are provided. See Professional Membership Fees
+                                  below, for further information.
+
+                                  If accommodation is offered as part of the booking, this is
+                                  permitted, provided that the cost is within the maximum rates
+                                  stated in section 2.1: Accommodation.
+
+
+                                                15
+Topic            Allowable   Criteria (if applicable)
+                             Where an organised or formal dinner is offered as part of the
+                             booking, this is permitted as part of the attendance cost and is
+                             not restricted by the subsistence limits.
+
+                             Other food and drink, not covered by the attendance fee, fall
+                             within the daily subsistence rates in section 2.7: Subsistence
+                             (Food & Drink).
+
+                             Additional costs for leisure / social activities cannot be claimed
+                             for, as these would be considered as taxable benefits by HMRC.
+
+Journal and     Yes
+Paper
+Submission Fees
+
+Copyright Fees   Yes         This covers the use of intellectual property (e.g., images,
+                             designs, literature, music) but excludes software, which is
+                             covered below under IT Software.
+
+
+Postage and      Yes         Claims for the purchase of stamps, independent courier
+Courier Fees                 services, or customs charges for business purposes are eligible
+                             for reimbursement.
+
+Career           Yes         With approval from Student Futures, students may claim
+Confident                    expenses related to participation in the Career Confident
+Allowance                    programme.
+
+IT Software      Yes         Before purchasing any IT software (e.g. LinkedIn Premium,
+                             Squarespace etc.), written approval must be obtained from IT.
+
+                             IT software should be purchased through the University
+                             Procurement processes whenever possible. These items may
+                             only be claimed as an expense if accompanied by an approval
+                             email from the IT Consultation team confirming that the item(s)
+                             can be purchased personally and reimbursed.
+
+IT Hardware      No          IT hardware (i.e. laptops, etc.) must be purchased through the
+                             University Procurement processes, including replacements.
+
+Professional     Yes         Individual Memberships
+Membership
+                             Individual memberships can only be reimbursed if:
+Fees
+                                •   The professional body is listed among the approved
+                                    organisations published by HMRC
+
+                             In addition, at least one of the following must also apply,
+                             otherwise the cost is considered a taxable benefit and cannot
+                             be claimed:
+
+
+
+                                           16
+Topic             Allowable   Criteria (if applicable)
+                                  •   The membership is mandatory to teach on a
+                                      professionally accredited course.
+                                  •   The nature of the membership must be relevant to the
+                                      individual’s employment and directly benefit the
+                                      performance of their duties.
+
+                              Note: Joining a society or organisation in order to attend a
+                              conference, meeting or training course does not generally
+                              count as a professional membership, and so does not come
+                              under these restrictions, as long as no benefits outside of
+                              attendance are provided. These costs should be claimed under
+                              Conference and Training Fees, instead.
+
+                              Departmental or Corporate Memberships
+
+                              Departmental or corporate memberships should be arranged
+                              through your local Finance Team or Buying Hub.
+
+Fit for work      Yes         Charges for obtaining a Fit Note are reimbursable only when
+notes                         accompanied by approval from HR.
+
+Books, Journals   No          Books, journals, and newspapers for business use must be
+and Newspapers                purchased in accordance with the University Procurement
+                              Policy and Procedures.
+
+                              These items cannot be claimed as an expense, as they are
+                              considered a taxable benefit by HMRC.
+
+
+Gifts             No          Gifts, where appropriate, must be arranged in accordance the
+                              Anti-Bribery and Corruption Policy and the University
+                              Procurement Policy and Procedures and should not be claimed
+                              as an expense.
+
+                              Gifts for Cardiff University staff members (e.g. for special
+                              occasions) are not permitted.
+
+
+Eye Tests and     No          All costs covered by the University for eye tests and glasses
+Glasses                       must be arranged through the School of Optometry, following
+                              the process outlined on their intranet pages.
+
+
+Health and        No          Purchases of health and safety equipment and clothing must
+Safety                        be arranged in accordance with the University Procurement
+Equipment and                 Policy and Procedures and are not allowable as expenses.
+Clothing
+                              Any clothing that HMRC do not consider to be necessary
+                              protective clothing or a uniform is considered a taxable benefit
+                              by HMRC and therefore cannot be purchased by the University
+                              or claimed as an expense.
+
+
+                                            17
+Topic             Allowable   Criteria (if applicable)
+Work Uniforms     No          Purchases of required uniforms must be arranged in
+                              accordance with the University Procurement Policy and
+                              Procedures and are not allowable as expenses.
+
+                              Any clothing that HMRC do not consider to be necessary
+                              protective clothing or a uniform is considered a taxable benefit
+                              by HMRC and therefore cannot be purchased by the University
+                              or claimed as an expense.
+
+Childcare         No          The University does not cover childcare costs for staff under
+                              any circumstances, including when working outside standard
+                              office hours or while travelling.
+
+                              Childcare expenses are considered a taxable benefit by HMRC
+                              and therefore cannot be claimed as an expense.
+
+Costs which are   No          Any costs not specifically mentioned in this policy are not
+Never Allowed                 permissible through the Travel and Expenses processes. Costs
+                              which are never reimbursable include (but are not limited to):
+
+                                 •   Venue hire, catering, or equipment for meetings,
+                                     conferences, and events.
+
+                                 •   Anything deemed a taxable benefit under HMRC
+                                     regulations, such as costs not wholly and exclusively for
+                                     business purposes (e.g. laundry, toiletries, sun cream,
+                                     medication, newspapers purchased for personal
+                                     reading or individual use, haircuts, suitcases,
+                                     sunglasses, travel adaptors, personal telephone
+                                     contracts); personal expenses unrelated to Cardiff
+                                     University business; payments to suppliers for non-
+                                     business use of goods or services.
+
+                                 •   Reimbursement of expenses paid by others.
+
+                                 •   Payments for wages, call-out fees, overtime, or other
+                                     ad-hoc remuneration (e.g., payments to translators or
+                                     other service providers, participant/public contributor
+                                     fees, tokens of thanks, per diems, awards, and prizes).
+                                     This includes gifts given in lieu of payment (such as gift
+                                     cards).
+
+                                 •   Goods and services available through existing approved
+                                     suppliers. Convenience is not a valid reason to override
+                                     University contracts (e.g., stationery, last-minute food
+                                     and drink for meetings, prizes, poster printing, flowers,
+                                     tokens of thanks for research participants, gift
+                                     vouchers, etc.)
+
+
+
+                                            18
+3. Travel and Expenses Guidelines
+3.1 Requests for Travel or Expenditure
+3.1.1 Financial Approval
+Before making any travel arrangements or purchases, the traveller or claimant should obtain
+approval from the relevant financial approver via the SAP Concur or non-SAP Concur process for the
+applicable budget or project code(s). Note: The Travel and Expenses team is not responsible for
+verifying any local or pastoral approvals.
+
+3.1.2 Financial Approvers and Codes on SAP Concur
+Schools and departments are responsible for maintaining financial approvers in SAP Concur and
+Oracle EBS, with the assistance of IT Support.
+
+Schools and departments are also responsible for managing the creation and deletion of General
+Ledger (GL) and project codes through the appropriate teams:
+
+   •   General Ledger Codes: Contact the Chart of Accounts (COA) team.
+   •   Project Codes: Contact the relevant project lead within Central Finance.
+
+3.1.3 Additional Approvals
+Where applicable, the following additional approvals must be obtained and attached to Requests or
+expense claims prior to submission. All expenditure must comply with section 1.2: Core Principles
+and must not be considered a taxable benefit, in accordance with HMRC regulations.
+
+  Type                Description                                                 Approver
+  Senior              Due to the frequent travel requirements inherent to their   Line Manager
+  Management          roles, the following individuals may occasionally need
+  International       to operate outside the boundaries of this policy to
+  Duties              effectively meet their business objectives:
+
+                           •   Director of International
+                           •   International Deans
+
+  University          Due to the regular travel requirements directly             Line Manager
+  Executive Board     associated with their roles, members of the University
+  (UEB) Duties        Executive Board (UEB) may occasionally need to
+                      operate outside the boundaries of this policy to
+                      effectively meet their business objectives.
+
+  Vice Chancellor     All Vice Chancellor (VC) travel or expenditure.             Chair of Council
+  (VC) Duties
+
+  Honorary Fellows    To accommodate the diverse needs of Honorary                Head of
+                      Fellows, this policy may occasionally need to be            Communications
+                      exceeded to align with the University's broader strategic
+                      objectives.
+
+
+
+                                                  19
+  Type                  Description                                                 Approver
+  Out of Policy         Any expenditure that does not align with the allowable      Head of Travel &
+  Spend                 items listed in section 2: ‘Policy for Compliant and Non-   Expenses (or
+  (not outlined         Compliant Travel and Expenses’.                             nominee)
+  elsewhere in this
+  table)
+
+
+
+3.1.4 Amendments to Travel Dates
+The traveller or sponsor is responsible for ensuring that the correct travel dates are recorded for
+insurance and duty of care purposes.
+
+If the travel dates change, the traveller must contact both the Travel and Expenses team, and the
+Insurance team, as soon as possible.
+
+3.2 Advance Payments
+3.2.1 Requesting an Advance Payment
+Advance payments can be requested to reduce any financial burden on those undertaking university
+business. These advance payments are not available to external visitors, including honorary staff.
+
+Advance payments will be considered for the values of £100 (min) to £5000 (max), up to the amount of
+the estimated expenditure on the Request. Only one advance payment per staff member will be
+permitted, at any time. Refer to the Travel and Expenses intranet pages for required timelines for
+requesting advance payments.
+
+3.2.2 Reconciling an Advance Payment
+After completing the travel or expenditure, the advance payment must be reconciled by submitting a
+claim detailing how the funds were used (including receipts) and returning any unspent amount to the
+University. This reconciliation should be submitted within 60 days of the expenditure date, in line with
+section 1.2: Core Principles.
+
+Only one advance payment is allowed per staff member, until it is fully reconciled.
+
+3.3 Travel: Pre-Booking Guidance
+3.3.1 Travel Compliance
+Travel should only be undertaken when:
+
+   •   No Alternative: No reasonable or effective alternative exists.
+   •   Strategic Need: There is a legitimate strategic business need that justifies the economic
+       impact.
+   •   Risk Assessment: Travel risks have been assessed (see section 3.3.2: Travel Safety and Risk
+       Management).
+   •   Carbon Impact: The carbon impact of travel options has been considered, in line with the
+       University’s sustainability strategy.
+
+
+
+
+                                                   20
+3.3.2 Travel Safety and Risk Management
+Risk Assessments
+Individuals must complete and obtain approval where necessary for any risk assessments before
+travelling (see section 4: Roles and Responsibilities). Risk assessments may be required for staff,
+students, and visitors travelling on university business. For overseas travel, it is essential to consult
+the Foreign, Commonwealth & Development Office (FCDO) website to determine if the destination is
+safe. The University prohibits travel to areas where the FCDO states ‘advise against all travel’. More
+information is available on the Risk Assessments page on the intranet or from the Safety team.
+
+The Trusted Research Framework
+Overseas research collaboration in sensitive and/or STEM-related fields should be reviewed by the
+Research Integrity, Governance and Ethics team (RIGE), and travellers should check whether a
+Trusted Research assessment is required by contacting RIGE.
+
+Vaccinations and Medication
+Please refer to the Health section on the Foreign, Commonwealth & Development Office (FCDO)
+website for guidance on recommended vaccinations and other precautionary measures for overseas
+travel. Vaccinations and/or medication recommended for ‘most travellers’ are ordinarily available
+through the NHS. If any of these vaccinations or medication are only available privately, these costs
+can be reimbursed.
+
+For vaccinations and/or medication that are recommended for ‘some travellers’, costs for these will
+be reimbursed provided they are accompanied by sufficient justification and evidence that they were
+required for that individual and trip.
+
+Accommodation Types
+As standard, hotels should be prioritised over other accommodation types due to their generally
+higher health and safety standards.
+
+If non-hotel accommodation (e.g., hostels, B&Bs, apartments, Airbnb) is the only suitable option, then
+a Non-Hotel Accommodation Safety Checklist (available on T&E intranet pages) should be completed
+to meet insurance, health and safety, and wellbeing requirements.
+
+Homestays (renting a room in someone's house) or renting directly from private landlords should be
+avoided for safety reasons. More information can be found on the Risk Assessments page on the
+intranet or from the Safety team.
+
+3.3.3 Travel Insurance
+UK Travel
+The corporate travel insurance policy covers staff, students, and visitors on approved UK business
+travel that includes at least one overnight stay. Personal elements of a trip are not covered, and
+private travel insurance costs will not be reimbursed by the University.
+
+Overseas Travel
+The corporate travel insurance policy covers staff, students, and visitors on approved overseas
+business travel. Personal elements of a trip are not covered, and private travel insurance costs will not
+be reimbursed by the University.
+
+Specific Insurance Requirements
+Information and guidance on specific insurance requirements are available on the Insurance intranet
+pages. Please review this guidance regularly, as the insurance policy is renewed annually and the
+requirements or coverage may change each year.
+                                                   21
+Summary of Travel Cover
+A Summary of Travel Cover document is available on the Insurance intranet pages. Travellers should
+review this document before their trip, particularly emergency medical cover details and contact
+numbers. If proof of insurance is needed (e.g., for visa applications), travellers should contact the
+Insurance team to request this.
+
+Motor Insurance UK
+Information regarding UK vehicle use and insurance (e.g. school/department/pool vehicles, hire
+vehicles, etc.) can be found in the Driving at Work policy, or by contacting the Travel, Transport and
+Parking or Insurance teams.
+
+Motor Insurance Overseas
+The corporate motor insurance policy does not cover vehicles hired overseas; drivers must arrange
+their own insurance for these bookings, which can then be claimed back as an expense.
+
+Insurance Queries
+All queries or additional requirements regarding the University’s insurance policies should be directed
+to the Insurance team.
+
+3.3.4 Cancellations, Refunds and Compensation
+The traveller is responsible for initiating any refund claim and ensuring that the funds are returned to
+the original payer. If the traveller receives a refund after being reimbursed by the University, they must
+inform the Travel and Expenses team to arrange the appropriate method for returning the funds to the
+University.
+
+Travellers may claim and retain compensation for delays or cancellations. However, they should not
+volunteer for denied boarding compensation for personal benefit.
+
+3.3.5 Travel Considerations
+Travel visas and authorisations
+Travellers must research the necessary travel visas and authorisations (e.g. ESTAs, ETAs etc.)
+for their destination(s) before submitting a Request. Information on requirements can be found on the
+Foreign, Commonwealth & Development Office (FCDO) website.
+
+Booking method
+Individuals can arrange travel bookings through the University’s channels, including the Travel
+Management Company (TMC) or SAP Concur. Where these options are not used, bookings must still
+comply with the rates and limits set out in this Travel and Expenses (T&E) Policy, have a financially
+approved Request prior to booking and be claimed through the expenses process.
+
+Personal loyalty schemes
+Personal loyalty schemes or memberships should not influence the choice of supplier for travel for
+university business; however, travellers may add their personal loyalty scheme details to collect
+points when making a booking (where this is possible).
+
+Commuting
+Commuting (travel between home and your designated place(s) of work as specified in your contract)
+is not an allowable expense, as it is considered a taxable benefit by HMRC. See section 2.4:
+Vehicle Mileage or Hire.
+
+
+
+                                                    22
+No Cost Travel (paid by third party)
+All University business travel must be recorded on a Request via the standard Travel and Expenses
+processes, even if there is no cost to the University (or external funding). These records are
+maintained for insurance and duty of care purposes, in case of emergencies.
+
+Travelling with Family or Friends
+Any costs associated with family or friends (unless as part of an approved accompanied travel
+request) will not be reimbursed by the University. In addition, your business travel choices, or any
+other cost-related decisions, must not be influenced by their presence.
+
+Extending Travel with a Period of Personal Leave
+Employees may extend a business trip to include personal leave, provided the personal travel is
+incidental to the business trip and does not increase travel costs. The Request must specify the actual
+return date and indicate which dates are for personal leave, for insurance and duty of care purposes.
+
+If you plan to add personal leave to your business travel, this should be arranged before booking. The
+University will not cover any amendment fees resulting from personal travel changes made after
+bookings are confirmed.
+
+   •   Transport: The return date may be extended to include personal leave, provided the departure
+       and arrival destinations remain unchanged. For audit purposes, attach like-for-like quotes
+       obtained on the same day to the Request or claim to demonstrate that the extended return
+       date did not incur additional costs.
+
+   •   Accommodation: The University will not extend business bookings to cover personal leave.
+       Separate personal bookings must be made for any additional days.
+
+Personal leave is not covered by the University’s travel insurance. Individuals are responsible for
+purchasing their own travel insurance for any personal travel dates and this cannot be claimed back.
+
+
+3.4 Expense Claims
+
+
+3.4.1 Claiming Expenses
+Claims and reconciliations must be submitted within 60 days of the expenditure date, in line with
+section 1.2: Core Principles, and supported by appropriate evidence as outlined in section 3.4.3:
+Receipts.
+
+Individuals can only claim for reimbursement for items that they purchased themselves, due to
+financial regulations. Individuals should not reimburse others personally and then claim back for the
+reimbursement; the person who made the payment should submit their own claim.
+
+The University will not reimburse expenses that would result in a taxable benefit, in accordance with
+HMRC regulations.
+
+Expense claims and related data, including personal information, will be stored in accordance with
+the University’s Records management policy and retention schedules, and Data Protection policy. For
+further guidance, please refer to the Records Management intranet pages.
+
+
+
+
+                                                   23
+3.4.2 Exchange Rates
+Exchange rates can be evidenced by:
+
+   •   The actual rate used at the time of payment (shown on the receipt).
+   •   The actual cost charged to a debit or credit card (shown on a redacted bank or card
+       statement).
+   •   The in-built exchange rate calculator on SAP Concur.
+   •   A reputable exchange rate website (e.g., xe.com).
+
+3.4.3 Receipts
+All expense claims should include digital copies of receipts or equivalent evidence (e.g. payment
+confirmations). Invoices will only be accepted if proof of payment is also provided.
+
+Original copies of receipts must be retained personally until reimbursement is received, in case of
+queries.
+
+Receipts must be itemised, detailing the items purchased and confirming any VAT charged, along with
+proof of payment. Credit card slips and bank statements do not meet these requirements and cannot
+be solely accepted as receipts to support a claim.
+
+If a fully itemised receipt cannot be obtained, a case for reimbursement without the receipt can be
+submitted for review.
+
+3.5 Compliance and Exceptions
+3.5.1 Policy Compliance
+Individuals are responsible for ensuring that all Requests, travel bookings, and expense claims
+comply with this policy.
+
+3.5.2 Out of Policy Spend
+Any expenditure requested which falls outside this policy will be considered non-compliant. To
+challenge a non-compliant classification, a case will need to be submitted to the Head of Travel and
+Expenses with a detailed justification for review. Without approval from the Head of Travel and
+Expenses (or nominee), non-compliant Requests or claims will not be reimbursed.
+
+Expenses deemed a taxable benefit, as defined by HMRC regulations, cannot be reimbursed.
+
+A report on approved exceptions to this policy will be used to inform and support amendments during
+the annual policy review.
+
+3.5.3 Consequences of Non-Compliance
+Non-compliance with this policy may result in:
+
+   •   Expenditure not being reimbursed and/or the University seeking recovery of non-compliant
+       spend or costs from the individual.
+   •   In extreme cases of breach or fraudulent claims, disciplinary action may be taken.
+
+
+
+
+                                                  24
+4. Roles and Responsibilities
+The below table outlines the key responsibilities for the main Travel and Expenses stakeholders.
+Please note that this is not an exhaustive list and there may be other responsibilities not stated. Other
+teams in the University may also have responsibilities that are related to travel and expenses.
+
+ Role                       Responsibility
+ Travellers, claimants, Policy Compliance: Ensure all Requests, travel bookings, and expense
+ delegates and sponsors claims, whether for themselves or on behalf of others, comply with this
+ (for visitors)         policy.
+
+                            Risk Assessments: Complete and secure approval for travel risk
+                            assessments (where necessary), as required by the University’s Safety
+                            and Insurance teams.
+
+                            Travel Insurance: Confirm appropriate travel insurance is in place prior
+                            to departure, in line with guidance from the University Insurance team.
+
+                            Additional Approvals: Obtain any necessary additional approvals. Refer
+                            to section 3.1.3: Additional Approvals.
+
+                            Documentation: Ensure all required documentation is complete and
+                            available (e.g., forms, receipts, additional approvals).
+
+                            Travel purchase card holders only: Accurately reconcile travel
+                            purchase card transactions in SAP Concur, in line with policy
+                            requirements.
+
+                            Timely Communication: Respond promptly to queries related to travel
+                            or expenses.
+
+ Line managers and          Policy Communication: Communicate relevant policies and
+ supervisors                procedures to new and existing staff or students, including updates as
+                            necessary.
+
+                            Wellbeing Consideration: Consider the pastoral wellbeing of staff and
+                            students when reviewing and approving travel, before the individual
+                            submits their Request via the Travel & Expense processes.
+
+                            Timely Communication: Respond promptly to queries related to travel
+                            or expenses.
+
+ Financial approvers        Authority Verification: Confirm appropriate authority to approve
+                            spending and any potential overspend against the relevant budget or
+                            project code before granting financial approval.
+
+                            Fund Verification: Verify that sufficient funds are available within the
+                            relevant budget or project code before approving expenditure.
+
+                            Fund Limits: If required, stipulate rates of reimbursement lower than
+                            those stated in this policy, to accommodate budgetary constraints.
+
+
+                                                   25
+Role                      Responsibility
+                          Business-related Costs: Confirm all expenditure is wholly and
+                          exclusively related to Cardiff University business.
+
+                          Timely Communication: Respond promptly to queries related to travel
+                          or expenses.
+
+Heads of Schools and      Additional Approvals: Review and, where appropriate, provide further
+Heads of Departments      approvals, as required. Refer to section 3.1.3: Additional Approvals.
+(Professional Services)
+                          Timely Communication: Respond promptly to queries related to travel
+                          or expenses.
+
+Head of Travel and        Additional Approvals: Review and, where appropriate, provide further
+Expenses (or nominee)     approvals, as required. Refer to section 3.1.3: Additional Approvals.
+
+With support from Head Promoting Best Practices: Make decisions that support best practices
+of Financial Compliance, in travel and expense management, with consideration for financial
+Chief Financial Officer prudence.
+and/or Group Financial
+Controller               Policy Development and Review: Lead the annual development and
+                         review of the Travel and Expenses Policy.
+
+                          Timely Communication: Respond promptly to queries related to travel
+                          or expenses.
+
+Cardiff University Travel Additional Approvals: Review and, where appropriate, provide further
+and Expenses team         approvals, as required. Refer to section 3.1.3: Additional Approvals.
+
+                          Compliance Assurance: Ensure Requests, travel bookings and expense
+                          claims comply with this policy, including any required additional
+                          approvals.
+
+                          Booking Oversight: Oversee the booking process between the traveller
+                          and the Travel Management Company.
+
+                          Process Development and Implementation: Develop and implement
+                          approved Cardiff University travel and expenses processes, and support
+                          users in their application.
+
+                          Timely Communication: Respond promptly to travel and expense-
+                          related queries, in line with published service level agreements (SLAs).
+
+Travel Management         Travel Support: Assist with travel quotes, bookings, amendments,
+Company                   cancellations, and access to visa services.
+
+                          24/7 Assistance: Provide round-the-clock support and emergency
+                          assistance to ensure traveller safety and wellbeing.
+
+                          Travel Reporting: Deliver comprehensive travel reports to the
+                          centralised Travel and Expense team to support effective management
+                          and oversight.
+
+                                                26
+ Role                       Responsibility
+                            Contractual Obligations: Fulfil all responsibilities outlined in the
+                            contract between the Travel Management Company and Cardiff
+                            University.
+
+
+
+
+5. Monitoring and Review
+Monitoring of compliance with this policy will be undertaken by the Travel and Expenses team (with
+some automatic checks by the SAP Concur system) at the point of submission of Requests, travel
+bookings and expense claims.
+
+This policy will be reviewed annually by the Travel and Expenses management team, and this review
+will be supported by a report on approved exceptions.
+
+
+6. Related Policies and Procedures
+This policy may, at times, be overridden or supplemented by urgent or emergency policies.
+
+This policy should be read in conjunction with other related university policies that may overlap with
+its provisions. University policies can be found on the staff and student intranet pages and/or the
+public website. The key related policies are:
+
+   •    Alcohol and Drug Misuse Policy
+   •    Anti-Money Laundering, Counter Terrorist Financing, Financial Sanction Compliance and Tax
+        Evasion Prevention Policy
+   •    Driving at Work Policy and Guidance
+   •    PCard Policy
+   •    Procurement Policy
+   •    Safety, Health, Wellbeing and Environment Policy Statement
+   •    Trusted Research: International Travel Guidance
+
+
+
+
+                                                   27
+7. Reference
+Appendix A: Cities Eligible for the Higher Accommodation Rate
+
+
+    Country        City                          Country        City
+    Belgium        Brussels                      Nigeria        Lagos
+    Belgium        Leuven                        Singapore      Singapore
+    Brazil         Rio de Janeiro                South Korea    Seoul
+    Canada         Montreal                      Spain          Barcelona
+    China          Beijing                       Spain          Madrid
+    China          Shanghai                      Switzerland    Basel
+    Denmark        Copenhagen                    Switzerland    Geneva
+    France         Paris                         Switzerland    Lausanne
+    Germany        Berlin                        Switzerland    Zurich
+    Germany        Munich                        UAE            Dubai
+    Hong Kong      Hong Kong                     UK             Edinburgh
+    Iceland        Reykjavik                     UK             London
+    India          Delhi                         USA            Atlanta
+    India          Mumbai                        USA            Austin
+    Ireland        Dublin                        USA            Boston
+    Italy          Milan                         USA            Chicago
+    Italy          Pisa                          USA            New Orleans
+    Italy          Rome                          USA            New York
+    Kenya          Nairobi                       USA            San Diego
+    Netherlands    Eindhoven                     USA            San Francisco
+    Nigeria        Abuja                         USA            Seattle
+    Nigeria        Ikeja                         USA            Washington
+
+
+
+
+                                        28
+Appendix B: Countries Eligible for the Higher Subsistence Rate
+
+
+
+
+         Countries                                     Countries
+         Bahrain                                       Luxembourg
+         Belgium                                       Malaysia
+         Canada                                        Netherlands
+         China                                         Nigeria
+         Denmark                                       Norway
+         Finland                                       Oman
+         France                                        Qatar
+         Germany                                       Saudi Arabia
+         Ghana                                         Singapore
+         Hong Kong                                     South Africa
+         Iceland                                       Sweden
+         India                                         Switzerland
+         Ireland                                       Taiwan
+         Japan                                         Thailand
+         Kenya                                         Uganda
+         Korea, Republic                               United Arab Emirates
+         Kuwait                                        United States of America
+
+
+
+
+                                         29
+
