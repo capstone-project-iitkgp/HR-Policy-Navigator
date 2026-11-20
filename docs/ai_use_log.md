@@ -22,3 +22,4 @@ What Claude drafted, who reviewed, and when. Add one row per module or PR.
 | 20 Nov 2026 | H5 probe fixes | Claude drafted: cancel-needs-list guard, policy_search withdrawn after nothing new / 2 empty searches, executor v2 rule, 3 tests | Himadri: re-run the cancel and mixed-route probes |
 | 20 Nov 2026 | `docs/decisions/h5_agent_loop.md`, `h4_prompts.md` | Claude drafted from the session | Himadri (author) pending | H5 step 9 |
 | 20 Nov 2026 | `scripts/probe_concurrency.py`, probe rows in h1 and mock_llm decision docs | Claude drafted the probe; Himadri ran it on the real endpoint | Himadri (author) | 429 for a second concurrent request VERIFIED; no Retry-After header |
+| 20 Nov 2026 | H6: `hrms/service.escalate_to_hr`, `rules.HR_CONTACT`, `agents/validate.py`, orchestrator wiring, tests, `docs/decisions/h6_tools.md` | Claude drafted from the plan Himadri approved | Himadri (author) pending | Built offline, 444 tests pass; not yet run on the real endpoint |

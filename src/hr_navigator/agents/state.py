@@ -34,6 +34,7 @@ class AgentState(BaseModel):
     plan: Plan | None = None
     passages: list[Passage] = Field(default_factory=list)  # best first, unique by chunk_id
     tool_records: list[ToolRecord] = Field(default_factory=list)
+    code_tools: list[ToolRecord] = Field(default_factory=list)  # called by code (validate, escalate), never shown to the model
     seen_calls: set[str] = Field(default_factory=set)
     steps: int = 0
     trace: list[str] = Field(default_factory=list)  # one short line per step, goes to AgentResponse.steps
@@ -71,6 +72,9 @@ class AgentState(BaseModel):
                     ok: bool = True, blocked: bool = False) -> None:
         self.seen_calls.add(call_key(name, args))
         self.tool_records.append(ToolRecord(name=name, args=args, ok=ok, result=result, blocked=blocked))
+
+    def record_code_tool(self, name: str, args: dict[str, Any], result: Any, *, ok: bool = True) -> None:
+        self.code_tools.append(ToolRecord(name=name, args=args, ok=ok, result=result))
 
     def gathered_text(self) -> str:
         """Short summary for the executor prompt ({{gathered}})."""

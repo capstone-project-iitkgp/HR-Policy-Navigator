@@ -8,7 +8,8 @@
 so the model can correct itself. The search function is injected (Akash's ``search`` once it
 exists; a fixture in tests) so this file does not depend on retrieval.
 
-Not here (H6): escalate_to_hr, validate_response, audit checks.
+Code-called only (H6): ``escalate`` (escalate_to_hr) is never in ``schemas()`` and ``run`` refuses it
+for a route, so the model cannot call it. validate_response is a pure function in agents/validate.py.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from typing import Any, Callable, NamedTuple
 
 from hr_navigator.schemas import Passage
 from hrms import agent_tools as hrms_tools
+from hrms import service as hrms_service
 
 log = logging.getLogger(__name__)
 
@@ -81,6 +83,17 @@ class ToolBox:
         if name == POLICY_TOOL:
             return self._policy_search(args)
         return ToolResult(hrms_tools.run_tool(actor_id, name, args), [])
+
+    def escalate(self, actor_id: str, topic: str, summary: str) -> dict[str, Any]:
+        """Hand-over note for HR (audit log + contact text), called by the orchestrator's code only."""
+        token = hrms_service.channel.set("agent")
+        try:
+            return hrms_service.escalate_to_hr(actor_id, topic, summary)
+        except Exception:  # never let a failed hand-over break the answer
+            log.exception("escalate_to_hr failed")
+            return {"ok": False, "error": "tool_failed", "message": "The hand-over to HR could not be recorded."}
+        finally:
+            hrms_service.channel.reset(token)
 
     @staticmethod
     def _parse(arguments: Any) -> dict[str, Any] | None:

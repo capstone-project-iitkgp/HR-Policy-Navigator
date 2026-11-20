@@ -20,6 +20,7 @@ from hr_navigator import prompts
 from hr_navigator.agents.budget import CONTEXT_LIMIT, OUTPUT_RESERVE, estimate_tokens, fit_context
 from hr_navigator.agents.state import AgentState
 from hr_navigator.agents.toolbox import POLICY_TOOL, ToolBox
+from hr_navigator.agents.validate import BLOCK_ANSWERS, BLOCK_BEHAVIOUR, validate_response
 from hr_navigator.llm import client, http
 from hr_navigator.prompts import render
 from hr_navigator.prompts.schemas import Critique, FinalAnswer, Plan
@@ -35,6 +36,8 @@ UNVERIFIED_MESSAGE = ("I could not verify an answer against the policy documents
                       "Please check with HR.")
 MAX_BAD_TOOL_TURNS = 2  # consecutive failed tool calls before the loop is left
 MAX_REPEATS = 2  # repeated calls (the first is blocked, the second ends the loop)
+# behaviours after which code hands the question to HR (escalate_to_hr); the model is never offered that tool
+ESCALATE_ON = ("escalate_to_human", "refuse_pii", "refuse_injection", "refuse_not_in_corpus")
 
 
 @dataclass
@@ -43,6 +46,7 @@ class Agent:
     store: SessionStore | None = None
     critic: Literal["off", "advisory", "revise"] = "advisory"  # decision 2
     strict_citations: bool = True  # decision 3
+    block_unsafe: bool = True  # validate_response: replace unsafe answers (False = note only, for ablation)
     temperature: float = 0.2
     raise_http_errors: bool = False  # eval runs: stop on capacity/network errors instead of answering "error"
     _seed: int | None = None
@@ -67,6 +71,8 @@ class Agent:
                 raise
             state.note(f"stopped: {type(exc).__name__}")
             return self._response(state, None, BUSY_MESSAGE, "error"), state
+        if final is not None and final.behaviour in ESCALATE_ON and who:
+            final = self._escalate(state, final, request.question)
         state.final_behaviour = final.behaviour if final else ""
         response = self._response(state, final, final.answer if final else "", None)
         if self.store and response.status != "error":
@@ -88,7 +94,7 @@ class Agent:
         elif route in TOOL_ROUTES:
             self._execute(state, route)
         elif route == "escalate":
-            state.note("route escalate: escalate_to_hr is not built yet (H6); the answer says who to contact")
+            state.note("route escalate: no tools; the hand-over to HR is made by code after the answer")
         return self._answer_and_check(state)
 
     def _llm(self, state: AgentState, messages: list[dict], tag: str, *, schema=None, tools=None,
@@ -244,13 +250,35 @@ class Agent:
         from_hrms = any(not r.blocked and r.name != POLICY_TOOL for r in state.tool_records)
         return not (from_hrms and not state.passages)
 
-    def _problems(self, state: AgentState, final: FinalAnswer, sources: str) -> list[str]:
-        problems = render.check_citations(final, state.passages)
-        if not self._needs_citation(state):
-            problems = [p for p in problems if "needs at least one citation" not in p]
-        problems += [f"the number {n} is not in the passages, tool results or question"
-                     for n in render.unsupported_numbers(final.answer, sources, state.question)]
-        return problems
+    def _validate(self, state: AgentState, final: FinalAnswer, sources: str):
+        """Run validate_response (code, not a model call) and keep a record of it."""
+        v = validate_response(final, question=state.question, passages=state.passages, tool_records=state.tool_records,
+                              actor_id=state.employee_id, sources=sources, needs_citation=self._needs_citation(state))
+        state.record_code_tool("validate_response", {}, {"ok": True, "issues": [i.code for i in v.issues]})
+        return v
+
+    def _assess(self, state: AgentState, final: FinalAnswer, sources: str) -> tuple[FinalAnswer | None, list[str]]:
+        """(replacement, fixable problems). A replacement is set only for a safety block."""
+        v = self._validate(state, final, sources)
+        if v.blocks:
+            first = v.blocks[0]
+            state.note(f"validate_response: blocked ({first.code}): {first.detail}"
+                       + ("" if self.block_unsafe else " [report only]"))
+            if self.block_unsafe:
+                return FinalAnswer(behaviour=BLOCK_BEHAVIOUR[first.code], answer=BLOCK_ANSWERS[first.code]), []
+        return None, [i.detail for i in v.fixes]
+
+    def _escalate(self, state: AgentState, final: FinalAnswer, question: str) -> FinalAnswer:
+        """Hand the question to HR after a refusal or escalation: an audit-log note plus the contact."""
+        args = {"topic": final.behaviour, "summary": question[:200]}
+        out = self.tools.escalate(state.employee_id, **args)
+        state.record_code_tool("escalate_to_hr", args, out, ok=bool(out.get("ok")))
+        if not out.get("ok"):
+            state.note(f"escalate_to_hr failed: {out.get('error')}")
+            return final
+        state.note(f"escalate_to_hr: {out['reference']}")
+        return final.model_copy(update={"answer": f"{final.answer}\n\nI have noted this for HR (reference "
+                                                  f"{out['reference']}). Contact: {out['contact']}."})
 
     def _revise(self, state: AgentState, final: FinalAnswer, messages: list[dict], issues: list[str], tag: str):
         state.step(f"revision ({tag})")
@@ -271,10 +299,14 @@ class Agent:
         final, repaired = render.snap_quotes(final, state.passages)
         if repaired:
             state.note(f"{repaired} near-verbatim quote(s) replaced by the passage's own sentence")
-        problems = self._problems(state, final, sources)
+        blocked, problems = self._assess(state, final, sources)
+        if blocked:
+            return blocked
         if problems and not state.at_cap:
             final = self._revise(state, final, messages, problems, "checks")
-            problems = self._problems(state, final, sources)
+            blocked, problems = self._assess(state, final, sources)
+            if blocked:
+                return blocked
         if not problems:
             return final
         state.note("still failing after revision: " + "; ".join(problems)[:300])
@@ -329,5 +361,5 @@ class Agent:
             answer=answer, citations=citations,
             steps=[{"note": line} for line in state.trace],
             tool_calls=[{"name": r.name, "args": r.args, "error": None if r.ok else (r.result or {}).get("error")}
-                        for r in state.tool_records],
+                        for r in state.tool_records + state.code_tools],
             status=status, usage=state.usage)

@@ -301,3 +301,12 @@ def needs_document(emp, code, used_so_far):
         # DEF 5.4.3: after two full sick days this year, a medical certificate is mandatory
         return True, "Medical certificate required (2 or more sick days already taken this year)."
     return False, rule.get("doc_rule") or ""
+
+
+# --- HR contact for escalations (PLACEHOLDER) -----------------------------
+# Neither manual gives a reachable HR address, so these are synthetic (.invalid never resolves).
+# UNVERIFIED: replace with the policy's own wording if a manual names an HR role to contact.
+HR_CONTACT = {
+    "DEF": "HR team, Digital Empowerment Foundation (placeholder: hr-def@example.invalid)",
+    "BLDEDU": "HR office, BLDE Association (placeholder: hr-bldedu@example.invalid)",
+}

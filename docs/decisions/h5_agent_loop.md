@@ -18,7 +18,7 @@ Parts: `agents/state.py` (state, step counter, trace), `agents/budget.py` (token
 
 ## Where the build differs from the plan
 - `ToolBox.run` returns `ToolResult(result, passages)`: the model sees 300-character snippets, the answer stage gets the full passages.
-- `policy_search` takes only `query`; `escalate_to_hr`, `validate_response` and the audit checks are still H6. Route `escalate` only writes a trace note.
+- `policy_search` takes only `query`. `escalate_to_hr` and `validate_response` were added in H6 as code-called tools (see `h6_tools.md`); the route `escalate` has no tools and the hand-over is made by code after the answer.
 - The clarify and refuse_injection routes do one search by code, so the answer can name options or still answer the real question.
 - Code checks added: `snap_quotes` (a quote that is at least 85% like a passage sentence is replaced by the passage's own text), `unsupported_numbers` treats 6 and 6.0, 1,000 and 1000 as equal. An unsupported number alone is noted, not blocked (false positives).
 - HR-data-only answers need no citation; model citations are dropped with a note.

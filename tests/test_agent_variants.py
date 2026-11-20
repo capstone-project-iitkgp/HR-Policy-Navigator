@@ -54,7 +54,7 @@ def test_v2_rag_searches_once_by_code_and_skips_planner(monkeypatch):
     script = use(monkeypatch, answer())
     rec = VARIANTS["v2_rag"](ITEM, 0)
     assert len(script.calls) == 1 and script.calls[0]["tag"] == "agent_answer"
-    assert [t.name for t in rec.tool_calls] == ["policy_search"] and rec.retrieved[0].chunk_id == "z-1"
+    assert [t.name for t in rec.tool_calls] == ["policy_search", "validate_response"] and rec.retrieved[0].chunk_id == "z-1"
     assert rec.steps == 1 and rec.citations
 
 
@@ -93,4 +93,4 @@ def test_dev_run_agent_mode(monkeypatch):
     use(monkeypatch, PLAN, SEARCH, "DONE", answer(), Critique(verdict="ok"))
     row = dev_run.run_item_agent(item)
     assert row["behaviour"] == "answer" and row["route_ok"] and row["facts_ok"] and row["behaviour_ok"]
-    assert row["citation_problems"] == [] and row["tool_calls"] == ["policy_search"] and row["critic"] == "ok"
+    assert row["citation_problems"] == [] and row["tool_calls"] == ["policy_search", "validate_response"] and row["critic"] == "ok"

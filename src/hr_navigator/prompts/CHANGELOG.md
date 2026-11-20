@@ -23,3 +23,5 @@ Code changes from the same run (not prompts): a tool call named DONE ends the lo
 Executor v2, small addition (20 Nov, after the cancel and mixed-route probes): rule "never guess a request id: call list_my_requests first". Code: `cancel_leave_request` is blocked until `list_my_requests` has succeeded (the model had invented id 12345); a search that adds nothing new, or 2 empty searches, now withdraws `policy_search` from the tools offered instead of leaving the loop, so a policy_and_hrms question still reaches the HR tools (before, it searched 5 times, hit the step cap and never read the balance).
 
 Probe 2 fixes (20 Nov): when policy_search is withdrawn the tool result tells the model so (it had called it again, costing 2 steps); a successful cancel without a draft in the same turn is status answered, not needs_confirmation.
+
+H6 (20 Nov): no prompt changed. Code-only additions (`agents/validate.py`, `escalate_to_hr`), so prompt hashes stay comparable with the earlier dev runs. Refusal answers now end with a hand-over sentence added by code.

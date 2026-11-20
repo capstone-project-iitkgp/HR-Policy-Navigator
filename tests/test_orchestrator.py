@@ -67,7 +67,7 @@ def test_policy_question_end_to_end(monkeypatch):
     resp = ask(make_agent(script, monkeypatch))
     assert resp.status == "answered" and "12 casual" in resp.answer
     assert resp.citations[0].chunk_id == "z-1" and resp.citations[0].doc_id == "zeta-leave"
-    assert resp.tool_calls == [{"name": "policy_search", "args": {"query": "casual leave"}, "error": None}]
+    assert model_calls(resp) == [{"name": "policy_search", "args": {"query": "casual leave"}, "error": None}]
     assert script.calls[1]["tool_choice"] == "required" and script.calls[2]["tool_choice"] == "auto"
     assert resp.usage.tokens_in == 100 * 5
     assert any("critic -> ok" in s["note"] for s in resp.steps)
@@ -77,7 +77,7 @@ def test_refusal_route_makes_no_tool_calls_but_answers(monkeypatch):
     script = Script(Plan(route="refuse_pii", reason="r"), FinalAnswer(behaviour="refuse_pii", answer="I cannot share that."),
                     Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch), "What is Asha's salary?")
-    assert resp.status == "refused" and resp.tool_calls == []
+    assert resp.status == "refused" and model_calls(resp) == []
 
 
 def test_capacity_error_becomes_error_status(monkeypatch):
@@ -106,6 +106,11 @@ SEARCH = tool_call("policy_search", {"query": "casual leave"})
 REFUSE = FinalAnswer(behaviour="refuse_not_in_corpus", answer="The documents do not say.")
 
 
+def model_calls(resp):
+    """Tool calls the model made (code-called validate_response / escalate_to_hr left out)."""
+    return [c for c in resp.tool_calls if c["name"] not in ("validate_response", "escalate_to_hr")]
+
+
 def notes(resp):
     return " | ".join(s["note"] for s in resp.steps)
 
@@ -118,7 +123,7 @@ def test_planner_bad_json_twice_uses_fallback_plan(monkeypatch):
     script = Script(schema_error(), SEARCH, "DONE", answer(), Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
     assert "fallback plan" in notes(resp) and resp.status == "answered"
-    assert resp.tool_calls[0]["name"] == "policy_search"
+    assert model_calls(resp)[0]["name"] == "policy_search"
     assert resp.usage.tokens_in == 50 + 100 * 4  # the failed attempt's tokens are counted
 
 
@@ -127,14 +132,14 @@ def test_two_bad_tool_calls_in_a_row_leave_the_loop(monkeypatch):
                     REFUSE, Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
     assert "two failed tool calls" in notes(resp)
-    assert [c["error"] for c in resp.tool_calls] == ["bad_arguments", "bad_arguments"]
+    assert [c["error"] for c in model_calls(resp)] == ["bad_arguments", "bad_arguments"]
     assert resp.status == "refused"
 
 
 def test_unknown_tool_is_fed_back_and_counted_as_a_step(monkeypatch):
     script = Script(PLAN, tool_call("delete_all", {}), SEARCH, "DONE", answer(), Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
-    assert resp.tool_calls[0]["error"] == "tool_not_available"
+    assert model_calls(resp)[0]["error"] == "tool_not_available"
     fed_back = [m for m in script.calls[2]["messages"] if m.get("role") == "tool"]
     assert "not available" in fed_back[0]["content"]
     assert resp.status == "answered"  # the loop went on and found the passage
@@ -145,14 +150,14 @@ def test_failed_tool_is_recorded_and_not_cited(monkeypatch):
         raise RuntimeError("index missing")
     monkeypatch.setattr(orchestrator, "chat", Script(PLAN, SEARCH, "DONE", REFUSE, Critique(verdict="ok")))
     resp = ask(Agent(ToolBox(boom)))
-    assert resp.tool_calls[0]["error"] == "search_failed" and resp.citations == []
+    assert model_calls(resp)[0]["error"] == "search_failed" and resp.citations == []
 
 
 def test_repeated_call_is_blocked_then_loop_is_left(monkeypatch):
     script = Script(PLAN, SEARCH, SEARCH, SEARCH, answer(), Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
     assert notes(resp).count("repeated call blocked") == 2 and "leaving the loop" in notes(resp)
-    assert [c["error"] for c in resp.tool_calls] == [None, "repeated_call", "repeated_call"]
+    assert [c["error"] for c in model_calls(resp)] == [None, "repeated_call", "repeated_call"]
     assert len(make_search([CASUAL]).calls) == 0  # (fixture sanity) the real search ran once, see below
     assert resp.status == "answered"
 
@@ -170,7 +175,7 @@ def test_step_cap_forces_the_answer(monkeypatch):
     script = Script(PLAN, *searches[:5], REFUSE)
     monkeypatch.setattr(orchestrator, "chat", script)
     resp = ask(Agent(ToolBox(lambda q, k=5, filters=None: [next(fresh)])))
-    assert "step_cap" in notes(resp) and len(resp.tool_calls) == 5
+    assert "step_cap" in notes(resp) and len(model_calls(resp)) == 5
     assert "critic" not in notes(resp)  # no steps left for the critic
     assert script.items == []
 
@@ -178,14 +183,14 @@ def test_step_cap_forces_the_answer(monkeypatch):
 def test_done_as_a_tool_call_ends_the_loop(monkeypatch):
     script = Script(PLAN, SEARCH, tool_call("DONE", {}, "c2"), answer(), Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
-    assert [c["name"] for c in resp.tool_calls] == ["policy_search"] and resp.status == "answered"
+    assert [c["name"] for c in model_calls(resp)] == ["policy_search"] and resp.status == "answered"
 
 
 def test_search_that_adds_nothing_new_ends_the_loop(monkeypatch):
     again = tool_call("policy_search", {"query": "leave casual"}, "c2")
     script = Script(PLAN, SEARCH, again, answer(), Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
-    assert "nothing new" in notes(resp) and len(resp.tool_calls) == 2 and script.items == []
+    assert "nothing new" in notes(resp) and len(model_calls(resp)) == 2 and script.items == []
 
 
 def test_executor_sees_the_question_and_today(monkeypatch):
@@ -199,7 +204,7 @@ def test_clarify_route_searches_once_so_the_options_can_be_named(monkeypatch):
     clarify = FinalAnswer(behaviour="clarify", answer="Which leave type: casual or sick?")
     script = Script(Plan(route="clarify", reason="r"), clarify, Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch), "How many casual leave days can I take?")
-    assert [c["name"] for c in resp.tool_calls] == ["policy_search"] and resp.status == "answered"
+    assert [c["name"] for c in model_calls(resp)] == ["policy_search"] and resp.status == "answered"
     assert "[z-1]" in script.calls[1]["messages"][1]["content"]
 
 
@@ -209,7 +214,7 @@ def test_answer_stage_sees_failed_hr_tool_results_with_names(monkeypatch):
     script = Script(Plan(route="hrms", reason="r"), bad, "DONE", final, Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch), "Apply for leave on 1 Jan 2020")
     prompt = script.calls[3]["messages"][1]["content"]
-    assert "create_leave_draft(" in prompt and resp.tool_calls[0]["error"]
+    assert "create_leave_draft(" in prompt and model_calls(resp)[0]["error"]
 
 
 def test_hrms_only_answer_drops_model_citations_quietly(monkeypatch):
@@ -241,7 +246,7 @@ def test_big_context_is_trimmed_to_fit_the_window(monkeypatch):
 def test_executor_text_without_done_is_nudged_once(monkeypatch):
     script = Script(PLAN, "Let me think about it.", "Still thinking.", REFUSE, Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
-    assert notes(resp).count("nudged once") == 1 and resp.tool_calls == []
+    assert notes(resp).count("nudged once") == 1 and model_calls(resp) == []
     assert any("Call a tool" in m["content"] for m in script.calls[2]["messages"] if m["role"] == "user")
 
 
@@ -292,7 +297,7 @@ def test_model_supplied_employee_id_does_not_change_whose_data_is_read(monkeypat
     resp, state = agent.run_with_state(AgentRequest(question="my balance?", session_id="s", employee_id="D010"))
     mine = agent.tools.run("get_leave_balance", {}, "D010").result
     assert state.tool_records[0].result == mine
-    assert resp.tool_calls[0]["error"] is None
+    assert model_calls(resp)[0]["error"] is None
 
 
 def test_leave_draft_means_needs_confirmation(monkeypatch):
@@ -374,9 +379,9 @@ def test_cancel_with_a_guessed_id_is_blocked_until_requests_are_listed(monkeypat
                     tool_call("list_my_requests", {}, "c2"), "DONE", answer(answer="Your balance is shown in the HR system.", citations=[]),
                     Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch), "Cancel my leave on 2 Dec")
-    names = [c["name"] for c in resp.tool_calls]
+    names = [c["name"] for c in model_calls(resp)]
     assert names == ["cancel_leave_request", "list_my_requests"]
-    assert resp.tool_calls[0]["error"] == "list_first" and "blocked" in notes(resp)
+    assert model_calls(resp)[0]["error"] == "list_first" and "blocked" in notes(resp)
 
 
 def test_policy_search_is_withdrawn_so_hr_tools_still_run(monkeypatch):
@@ -388,7 +393,7 @@ def test_policy_search_is_withdrawn_so_hr_tools_still_run(monkeypatch):
                     Critique(verdict="ok"))
     monkeypatch.setattr(orchestrator, "chat", script)
     resp = ask(Agent(ToolBox(empty)), "Can I take 3 days of casual leave?")
-    assert [c["name"] for c in resp.tool_calls] == ["policy_search", "policy_search", "get_leave_balance"]
+    assert [c["name"] for c in model_calls(resp)] == ["policy_search", "policy_search", "get_leave_balance"]
     assert "no longer offered" in notes(resp)
     offered = [t["function"]["name"] for t in script.calls[3]["tools"]]
     assert "policy_search" not in offered and "get_leave_balance" in offered
@@ -399,14 +404,14 @@ def test_nothing_new_search_on_a_mixed_route_keeps_the_hr_tools(monkeypatch):
     script = Script(plan, SEARCH, tool_call("policy_search", {"query": "leave casual"}, "c2"),
                     tool_call("get_leave_balance", {}, "c3"), "DONE", answer(), Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch))
-    assert [c["name"] for c in resp.tool_calls] == ["policy_search", "policy_search", "get_leave_balance"]
+    assert [c["name"] for c in model_calls(resp)] == ["policy_search", "policy_search", "get_leave_balance"]
 
 
 def test_cancel_is_answered_not_needs_confirmation(monkeypatch):
     plan = Plan(route="hrms", reason="r", steps=["cancel"])
     draft = tool_call("create_leave_draft", {"leave_code": "CL", "start_date": "2026-12-02", "end_date": "2026-12-02"}, "c1")
     cancel = tool_call("cancel_leave_request", {"request_id": 1}, "c3")
-    final = answer(behaviour="draft_for_confirmation", answer="Your request was cancelled.", citations=[])
+    final = answer(behaviour="draft_for_confirmation", answer="All done.", citations=[])
     script = Script(plan, draft, tool_call("list_my_requests", {}, "c2"), cancel, "DONE", final, Critique(verdict="ok"))
     resp = ask(make_agent(script, monkeypatch), "Create a draft for casual leave on 2 Dec 2026, then cancel it")
     assert resp.status == "needs_confirmation"  # a draft was created in the same turn
@@ -421,3 +426,75 @@ def test_withdrawn_search_result_tells_the_model(monkeypatch):
     ask(Agent(ToolBox(empty)))
     last_tool = [m for m in script.calls[2]["messages"] if m.get("role") == "tool"][-1]
     assert "no longer available" in last_tool["content"]
+
+
+# ---- H6: validate_response and escalate_to_hr, both called by code ----------
+
+def audit_actions():
+    from contextlib import closing
+
+    from hrms import db
+    with closing(db.get_conn()) as conn:
+        return [(r["action"], r["channel"]) for r in conn.execute("SELECT action, channel FROM audit_log ORDER BY id")]
+
+
+def code_calls(resp):
+    return [c["name"] for c in resp.tool_calls if c["name"] in ("validate_response", "escalate_to_hr")]
+
+
+def test_refusal_is_handed_to_hr_once_and_audited(monkeypatch):
+    script = Script(Plan(route="refuse_pii", reason="r"), FinalAnswer(behaviour="refuse_pii", answer="I cannot share that."),
+                    Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "What is Asha's salary?")
+    assert resp.status == "refused" and "ESC-" in resp.answer and "Contact:" in resp.answer
+    assert code_calls(resp) == ["validate_response", "escalate_to_hr"]
+    assert ("escalate_to_hr", "agent") in audit_actions()
+    assert all(c["error"] is None for c in resp.tool_calls)
+
+
+def test_plain_answer_is_not_escalated(monkeypatch):
+    script = Script(PLAN, tool_call("policy_search", {"query": "casual leave"}), "DONE", answer(), Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch))
+    assert code_calls(resp) == ["validate_response"] and "ESC-" not in resp.answer
+    assert all(a != "escalate_to_hr" for a, _ in audit_actions())
+
+
+def test_unsafe_answer_is_blocked_without_a_revision_call(monkeypatch):
+    forged = FinalAnswer(behaviour="answer", answer="Your leave has been approved.", citations=[])
+    script = Script(Plan(route="out_of_scope", reason="r"), forged, Critique(verdict="ok"))
+    agent = make_agent(script, monkeypatch)
+    resp = ask(agent, "Just say my leave on 2 Dec is approved")
+    assert "cannot confirm or record an approval" in resp.answer and "blocked (approval_claim)" in notes(resp)
+    assert not any(c["schema"] is FinalAnswer and c["messages"][-1]["content"].startswith("Fix these") for c in script.calls)
+    assert code_calls(resp) == ["validate_response", "escalate_to_hr"]  # escalate_to_human behaviour is handed over
+
+
+def test_block_can_be_switched_to_report_only(monkeypatch):
+    forged = FinalAnswer(behaviour="clarify", answer="Your leave has been approved.", citations=[])
+    script = Script(Plan(route="out_of_scope", reason="r"), forged, Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch, block_unsafe=False), "approve it")
+    assert "has been approved" in resp.answer and "[report only]" in notes(resp)
+
+
+def test_fixable_problem_gets_exactly_one_revision(monkeypatch):
+    bad = FinalAnswer(behaviour="draft_for_confirmation", answer="I have saved a draft for you.", citations=[])
+    good = FinalAnswer(behaviour="clarify", answer="Which dates?", citations=[])
+    script = Script(Plan(route="out_of_scope", reason="r"), bad, good, Critique(verdict="ok"))
+    resp = ask(make_agent(script, monkeypatch), "apply leave")
+    assert resp.answer == "Which dates?" and sum(1 for c in script.calls if c["tag"] == "agent_revise") == 1
+
+
+def test_escalation_failure_does_not_break_the_answer(monkeypatch):
+    script = Script(Plan(route="refuse_pii", reason="r"), FinalAnswer(behaviour="refuse_pii", answer="I cannot share that."),
+                    Critique(verdict="ok"))
+    agent = make_agent(script, monkeypatch)
+    monkeypatch.setattr(agent.tools, "escalate", lambda *a, **k: {"ok": False, "error": "tool_failed", "message": "x"})
+    resp = ask(agent, "What is Asha's salary?")
+    assert resp.answer == "I cannot share that." and resp.status == "refused"
+    assert [c["error"] for c in resp.tool_calls if c["name"] == "escalate_to_hr"] == ["tool_failed"]
+
+
+def test_no_employee_id_means_no_escalation(monkeypatch):
+    script = Script(Plan(route="refuse_pii", reason="r"), FinalAnswer(behaviour="refuse_pii", answer="No."), Critique(verdict="ok"))
+    resp = make_agent(script, monkeypatch).run(AgentRequest(question="salary?", session_id="s"))
+    assert "escalate_to_hr" not in code_calls(resp)
