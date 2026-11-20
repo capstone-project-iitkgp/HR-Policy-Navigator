@@ -16,14 +16,14 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 | `src/hr_navigator/tools/` | Policy search, leave calculator, HR escalation |
 | `src/hr_navigator/state/` | Session memory |
 | `src/hr_navigator/safeguards/` | PII, prompt-injection defence, refusals, human review |
-| `src/hr_navigator/observability/` | Tracing, cost, and latency |
+| `src/hr_navigator/observability/` | Tracing (spans to `.cache/traces/*.jsonl`, off unless `TRACE=1` or `--trace`), trace summary, redaction |
 | `baselines/` | Week 1 single-prompt runners and frozen scores |
 | `experiments/` | Ablation configs and raw outputs |
 | `evaluation/` | Metrics, failure taxonomy, summary tables |
 | `data/manifests/` | Document ids, sources, and checksums |
 | `data/eval/` | Frozen queries and, later, retrieval judgments |
 | `security_tests/` | Prompt-injection and PII cases |
-| `app/` | Front end |
+| `app/` | Front end; `app/trace_page.py` is the trace viewer (`streamlit run app/trace_page.py`) |
 | `deploy/` | Container setup |
 | `traces/` | Redacted sample traces |
 | `tools/mock_llm/` | Local stand-in for the course LLM endpoint (see [Local LLM](#local-llm-stand-in)) |
