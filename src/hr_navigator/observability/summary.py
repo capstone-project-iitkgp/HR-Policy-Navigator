@@ -91,3 +91,24 @@ def format_summary(s: dict[str, Any]) -> str:
         if name in s["stage_ms"]:
             lines.append(f"  {name:<18}{s['stage_ms'][name] / 1000:>7.2f} s")
     return "\n".join(lines)
+
+
+def span_rows(spans: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The spans of one trace in reading order (parent before children, siblings by start time), each with
+    its depth, start offset and duration in ms. A span whose parent is missing is shown at the top level."""
+    ids = {s["span_id"] for s in spans}
+    kids: dict[str | None, list[dict[str, Any]]] = {}
+    for s in sorted(spans, key=lambda s: (s["start_ns"], s["end_ns"])):
+        kids.setdefault(s["parent_id"] if s["parent_id"] in ids else None, []).append(s)
+    t0 = min((s["start_ns"] for s in spans), default=0)
+    rows: list[dict[str, Any]] = []
+
+    def walk(parent: str | None, depth: int) -> None:
+        for s in kids.get(parent, []):
+            rows.append({"depth": depth, "name": s["name"], "kind": _kind(s) or "", "status": s["status"],
+                         "start_ms": (s["start_ns"] - t0) / 1e6, "duration_ms": _ms(s),
+                         "attributes": s["attributes"], "span_id": s["span_id"]})
+            walk(s["span_id"], depth + 1)
+
+    walk(None, 0)
+    return rows
