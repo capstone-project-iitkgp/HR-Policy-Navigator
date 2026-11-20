@@ -15,3 +15,4 @@ What Claude drafted, who reviewed, and when. Add one row per module or PR.
 | 20 Nov 2026 | `agents/toolbox.py`, `tests/fake_search.py`, `tests/test_toolbox.py` | Claude | Himadri (author), Akash (PR review) pending | H5 step 3; policy_search takes an injected search function, tested only with a keyword fixture |
 | 20 Nov 2026 | `state/session_store.py`, `tests/test_session_store.py` | Claude | Himadri (author), Akash (PR review) pending | H5 step 4; SQLite memory, 6 turns, 500 chars, bound to employee id |
 | 20 Nov 2026 | `agents/orchestrator.py`, `tests/test_orchestrator.py` | Claude | Himadri (author), Akash (PR review) pending | H5 step 5; loop tested only with a scripted fake chat(); Qwen tool-call behaviour unverified |
+| 20 Nov 2026 | `tests/test_orchestrator.py` (26 failure-mode tests), orchestrator fixes (None answer, HRMS-only answers need no citation) | Claude | Himadri (author), Akash (PR review) pending | H5 step 6; all on a scripted fake chat() |

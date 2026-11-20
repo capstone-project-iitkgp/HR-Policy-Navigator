@@ -61,7 +61,7 @@ class Agent:
         except (http.LLMHTTPError, httpx.TransportError) as exc:
             state.note(f"stopped: {type(exc).__name__}")
             return self._response(state, None, BUSY_MESSAGE, "error"), state
-        response = self._response(state, final, final.answer, None)
+        response = self._response(state, final, final.answer if final else "", None)
         if self.store and response.status != "error":
             self.store.add_turn(request.session_id, who, request.question, response.answer)
         return response, state
@@ -198,8 +198,16 @@ class Agent:
         final = self._run_critic(state, final, messages, passages_text, tools_text)
         return final
 
+    @staticmethod
+    def _needs_citation(state: AgentState) -> bool:
+        """An answer built only from the employee's own HR data (no passages) has nothing to cite."""
+        from_hrms = any(r.ok and not r.blocked and r.name != POLICY_TOOL for r in state.tool_records)
+        return not (from_hrms and not state.passages)
+
     def _problems(self, state: AgentState, final: FinalAnswer, sources: str) -> list[str]:
         problems = render.check_citations(final, state.passages)
+        if not self._needs_citation(state):
+            problems = [p for p in problems if "needs at least one citation" not in p]
         problems += [f"the number {n} is not in the passages, tool results or question"
                      for n in render.unsupported_numbers(final.answer, sources, state.question)]
         return problems
@@ -231,7 +239,7 @@ class Agent:
         if dropped and self.strict_citations:
             final = final.model_copy(update={"citations": good})
             state.note(f"dropped {dropped} citation(s) that did not verify")
-        if self.strict_citations and final.behaviour == "answer" and not final.citations:
+        if self.strict_citations and final.behaviour == "answer" and not final.citations and self._needs_citation(state):
             state.note("no verified citation left: downgraded to refuse_not_in_corpus")
             return FinalAnswer(behaviour="refuse_not_in_corpus", answer=UNVERIFIED_MESSAGE)
         return final  # an unsupported number alone is noted, not blocked (the check has false positives)
