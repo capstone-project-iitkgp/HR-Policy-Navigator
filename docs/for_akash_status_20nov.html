@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Status for Akash, 20 Nov 2026</title>
+<style>
+body{font:15px/1.55 system-ui,sans-serif;max-width:900px;margin:0 auto;padding:1rem 1rem 4rem;color:#222}
+h1{margin-bottom:.1rem}h2{margin-top:2rem;border-bottom:1px solid #ddd;padding-bottom:.2rem}
+table{border-collapse:collapse;width:100%;margin:.6rem 0}th,td{border:1px solid #ccc;padding:.35rem .6rem;vertical-align:top;text-align:left}
+th{background:#f3f3f3}pre{background:#f6f6f6;padding:.8rem;overflow:auto;border-radius:6px;font-size:13px}
+.ask{background:#fff8e1;border-left:4px solid #f0b400;padding:.5rem .9rem;margin:.8rem 0}
+.ok{background:#eefaf1;border-left:4px solid #2a7;padding:.5rem .9rem;margin:.8rem 0}
+</style>
+<h1>Status and asks for Akash</h1>
+<p>From Himadri, Fri 20 Nov 2026. Code freeze is Wed 25 Nov night, so there are 5 days left. Everything below is on branch <code>himadri_work</code>.</p>
+
+<div class="ask"><b>The one thing I need from you:</b> <code>hr_navigator.retrieval.search</code> (even a rough version). Everything on my side runs without it, but the full evaluation (H9, Tue 24 to Thu 26) cannot run until it exists. Please tell me a date. A version that returns the right <code>Passage</code> objects slowly is more useful to me than a fast one that is not ready.</div>
+
+<h2>1. Where my side is</h2>
+<table>
+<tr><th>Task</th><th>State</th></tr>
+<tr><td>H1 LLM client, schemas</td><td>Done. Chat client with cache, retries, schema validation, native tool calls.</td></tr>
+<tr><td>H2 / H3 eval harness, baselines</td><td>Done. Frozen <code>eval_v1</code>, resumable runner, rule scorer, 3 baselines run.</td></tr>
+<tr><td>H4 prompts</td><td>Done. Planner, executor, critic, answer; checked on a 12-item dev set (sanity only).</td></tr>
+<tr><td>H5 agent loop</td><td>Done. Plan, tool loop, answer, citation checks, critic. 412 tests pass. Tried on the real endpoint.</td></tr>
+<tr><td>H6 to H8</td><td>Next: <code>escalate_to_hr</code> and <code>validate_response</code>, tracing, Streamlit chat.</td></tr>
+<tr><td>H9 full eval runs</td><td>Blocked on real retrieval.</td></tr>
+</table>
+<p>The agent's search tool is called <code>policy_search</code>. It already works against a fake search in tests, and the CLI <code>scripts/ask.py</code> uses real retrieval automatically once it exists.</p>
+
+<h2>2. Interface points (please read)</h2>
+<h3>2.1 What I call</h3>
+<pre>from hr_navigator.retrieval import search      # module path I import, by name
+search(query: str, k: int = 5, filters: dict | None = None) -> list[Passage]</pre>
+<ul>
+<li>Best passage first. I use the order as given and trim from the end when the prompt is too long.</li>
+<li>It may return <code>[]</code> (I treat that as "nothing found"). If it raises, I record a <code>search_failed</code> tool error and carry on, so it never crashes the agent.</li>
+<li>I call it one query at a time from one thread. I currently never pass <code>filters</code>; tell me if you want me to (for example org or jurisdiction from the employee profile).</li>
+<li><code>ToolBox(search_fn)</code> takes the function as a parameter, so tests and your module do not clash.</li>
+</ul>
+<h3>2.2 What I need in each <code>Passage</code></h3>
+<table>
+<tr><th>Field</th><th>Why it matters to the agent</th></tr>
+<tr><td><code>chunk_id</code></td><td>Must be unique and stable. Citations are checked against it, and I de-duplicate passages by it. If it changes between runs, my cached results and eval records stop matching.</td></tr>
+<tr><td><code>doc_id</code>, <code>title</code></td><td>Shown in the citation and the UI section name.</td></tr>
+<tr><td><code>text</code></td><td>Exact source text. The model must quote it word for word and my code checks the quote against it, so please do not normalise it (no lower-casing, no whitespace changes, no added headings). Chunk size: the whole prompt has to fit in 8192 tokens, so about 500 tokens or fewer per chunk works with 5 results.</td></tr>
+<tr><td><code>org</code>, <code>jurisdiction</code></td><td>The answer prompt compares them with the employee's organisation. Empty values are fine but reduce the quality of "wrong organisation" answers.</td></tr>
+<tr><td><code>synthetic</code>, <code>version_date</code>, <code>url</code>, <code>scores</code></td><td>Used for reporting and the UI. Fill what you have.</td></tr>
+</table>
+
+<h3>2.3 Changes I made in shared files</h3>
+<ul>
+<li><b><code>ChatResult.tool_calls</code></b> is a new field in <code>schemas.py</code> (list of raw OpenAI tool calls, default empty). Existing code is unaffected.</li>
+<li><code>llm.client.chat(...)</code> now accepts <code>tools=</code> and <code>tool_choice=</code>. The cache stores tool calls.</li>
+<li><code>llm/http.py</code> is unchanged, so your <code>embed()</code> can keep using it.</li>
+<li>Agent tool names: <code>policy_search</code> (yours), plus 7 HR tools from <code>hrms.agent_tools</code>. <code>escalate_to_hr</code> follows in H6.</li>
+<li>Rule in the code: the acting employee id comes only from the request. Any <code>employee_id</code> the model passes is removed.</li>
+</ul>
+
+<h2>3. Findings from real runs that affect you</h2>
+<ul>
+<li>The endpoint allows 1 request at a time, 8192 tokens in total and 1024 out. One agent question makes 4 to 8 model calls and uses 4,000 to 11,000 tokens in total. Do not run your own endpoint calls (for example embedding experiments) while an eval is running, or one of us gets a 429.</li>
+<li>With no passages the agent says "the documents do not say". So an empty or failing search is visible in results straight away: please check <code>search()</code> on the 12 dev questions in <code>data/dev</code> before telling me it is ready.</li>
+<li>Qwen3-8B tool calling works (valid JSON arguments). It repeated near-identical searches, so the agent now stops searching after one that adds nothing new. Search quality on the first query therefore matters a lot.</li>
+</ul>
+
+<h2>4. Asks, in priority order</h2>
+<table>
+<tr><th>#</th><th>Ask</th><th>By</th></tr>
+<tr><td>1</td><td>A date for a first working <code>hr_navigator.retrieval.search</code> returning real <code>Passage</code> objects (BM25 alone is fine for a first version).</td><td>Sun 22 Nov</td></tr>
+<tr><td>2</td><td>Confirm the <code>Passage</code> points in 2.2: stable unique <code>chunk_id</code>, unmodified <code>text</code>, <code>org</code> and <code>jurisdiction</code> filled.</td><td>With #1</td></tr>
+<tr><td>3</td><td>Say whether you want <code>filters</code> passed (and which keys), or whether retrieval should not filter at all.</td><td>With #1</td></tr>
+<tr><td>4</td><td>Merge or rebase check: tell me which of your files overlap with <code>schemas.py</code>, <code>llm/</code>, <code>tests/</code>, so we do not collide.</td><td>Sat 21 Nov</td></tr>
+<tr><td>5</td><td>Reply on the open design points (section 5).</td><td>Sat 21 Nov</td></tr>
+</table>
+
+<h2>5. Not yet agreed with you</h2>
+<p>I decided these on my side and you have not confirmed them. Please say yes or no.</p>
+<ul>
+<li><b>Python version:</b> I developed on a 3.15 venv and kept the code version-neutral. Is 3.12 the target for deployment?</li>
+<li><b>Agent as an explicit code state machine</b> (no framework). Record: <code>docs/decisions/h5_agent_loop.md</code>.</li>
+<li><b>A NumPy index</b> for dense retrieval instead of a vector database, and <b>Phoenix</b> (or a JSONL fallback) for traces.</li>
+<li><b>Session memory</b> is in SQLite under <code>.cache/</code> (last 6 turns, 500 characters each, kept per employee id). Tell me if the app layer should own sessions instead.</li>
+</ul>
+
+<h2>6. How to check your side without me</h2>
+<pre>.venv/bin/python -m pytest -q                       # 412 tests; should stay green after your merge
+.venv/bin/python scripts/ask.py --dev D01 --llm      # uses your search once it exists
+.venv/bin/python -m evaluation.dev_run --agent       # 12 dev items, needs the real endpoint</pre>
+<p>The last two need the real endpoint (API key, CA certificate, Zscaler off); I can run them for you if you send me the module. Step-by-step design record: <code>docs/decisions/h5_agent_loop.md</code> and <code>docs/plans/h5_agent_loop_plan.html</code>.</p>
+
+<h2>7. Remaining schedule (mine)</h2>
+<ul>
+<li>Sat 21 to Mon 23: H6 (escalate, validate_response). Mon 23 to Tue 24: tracing. Tue 24 to Wed 25: Streamlit demo.</li>
+<li>Tue 24 to Thu 26: full evaluation runs (needs retrieval). Anything not working by Tue 24 midday is likely to be cut.</li>
+<li>Human tasks still open on my side: review of gold answers (<code>h3_review_answers.csv</code>). If any gold answer changes I must build <code>eval_v1.1</code> before the full run.</li>
+</ul>
+</html>

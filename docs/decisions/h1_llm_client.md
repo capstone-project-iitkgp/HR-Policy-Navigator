@@ -1,6 +1,6 @@
 # Decision: chat client for Qwen3-8B (`llm/http.py`, `llm/client.py`)
 
-Date: 20 Nov 2026. Status: implemented and tested against a fake server; probes run 20 Nov (results below; concurrency probe to be rerun).
+Date: 20 Nov 2026. Status: implemented and tested against a fake server; probes run 20 Nov (results below, including the concurrency probe).
 
 ## What it does
 `llm.client.chat(messages, *, schema=None, max_tokens=512, tag="", temperature=0.2, seed=None) -> ChatResult`
@@ -33,7 +33,7 @@ Date: 20 Nov 2026. Status: implemented and tested against a fake server; probes 
 | `tool_choice` auto / required / named | VERIFIED: `tool_calls` populated in all three (hermes-style parser), arguments valid JSON. Quirk: with a named function `finish_reason` is `stop`, not `tool_calls` | H5: read `message.tool_calls`, never `finish_reason`. The client has no tool parameters yet |
 | Does `seed` make repeated calls identical? | One sample (a short sentence, T=0.3, seed 7): identical. Weak evidence, since a short sentence can repeat by chance | `SEND_SEED = True`; harmless. Check once with two different seeds if exact repeats matter |
 | `max_tokens` 2000: clamped or rejected? | VERIFIED rejected: HTTP 400 `output token limit must be between 1 and 1024` | client clamps to 1024 before sending; `mock_llm` now rejects too |
-| Second concurrent request: 429 or queued? | NOT DETERMINED: the first request failed with a connect error (probable fault in the probe script, which opened its second connection differently; fixed, rerun needed), so the second request ran alone | keep the lock and the 429 retry |
+| Second concurrent request: 429 or queued? | VERIFIED 20 Nov (`scripts/probe_concurrency.py`, 2 rounds): while a 7 s request ran, a second request 0.4 s later got HTTP 429 `{"detail":"per-key concurrent request limit exceeded"}` in 0.08 s. It is rejected, not queued. No `Retry-After` header was sent | keep the process-wide lock and the 2/4/8 s backoff (the fallback is what applies, since there is no header). Two processes sharing the key will collide |
 
 Speed: single calls took 0.1 to 0.7 s; a 64-token answer took 1.5 s (about 40 tokens/s).
 
