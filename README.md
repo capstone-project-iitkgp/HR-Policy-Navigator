@@ -23,7 +23,7 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 | `data/manifests/` | Document ids, sources, and checksums |
 | `data/eval/` | Frozen queries and, later, retrieval judgments |
 | `security_tests/` | Prompt-injection and PII cases |
-| `app/` | Front end; `app/trace_page.py` is the trace viewer (`streamlit run app/trace_page.py`) |
+| `app/` | Front end; `app/chat_app.py` is the chat page (`streamlit run app/chat_app.py`), `app/trace_page.py` the trace viewer |
 | `deploy/` | Container setup |
 | `traces/` | Redacted sample traces |
 | `tools/mock_llm/` | Local stand-in for the course LLM endpoint (see [Local LLM](#local-llm-stand-in)) |
