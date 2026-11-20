@@ -40,6 +40,9 @@ class AgentState(BaseModel):
     trace: list[str] = Field(default_factory=list)  # one short line per step, goes to AgentResponse.steps
     usage: Usage = Field(default_factory=Usage)
     final_behaviour: str = ""  # behaviour of the final answer, "" if there was none
+    llm_calls: int = 0  # model calls that returned (H9 cost table)
+    cache_hits: int = 0  # of those, answered from the disk cache (their latency is not real)
+    llm_ms: int = 0  # summed latency the endpoint reported for the uncached calls
 
     def step(self, note: str) -> None:
         """Count one step and log it."""

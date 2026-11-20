@@ -130,6 +130,9 @@ class Agent:
                       tracing.FINISH: result.finish_reason, "app.cached": result.cached,
                       "app.latency_ms": result.latency_ms, "app.tool_calls": len(result.tool_calls)})
         state.usage = state.usage + result.usage
+        state.llm_calls += 1
+        state.cache_hits += int(result.cached)
+        state.llm_ms += result.latency_ms
         return result
 
     def _prompt_call(self, state: AgentState, name: str, schema, max_tokens: int = 500, **values):

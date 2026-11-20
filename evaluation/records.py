@@ -43,6 +43,8 @@ class RunRecord(BaseModel):
     finish_reason: str = ""  # "length" means truncated
     json_valid: bool = True  # did every structured output validate after retries?
     error: str | None = None  # unrecovered exception, loop abort or step-cap abort
+    # agent variants only (H9): what the checks and the model did; empty for v0_* runs
+    agent: dict = Field(default_factory=dict)
     # run settings
     model: str = ""
     temperature: float | None = None

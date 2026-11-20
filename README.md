@@ -19,7 +19,7 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 | `src/hr_navigator/observability/` | Tracing (spans to `.cache/traces/*.jsonl`, off unless `TRACE=1` or `--trace`), trace summary, redaction |
 | `baselines/` | Week 1 single-prompt runners and frozen scores |
 | `experiments/` | Ablation configs and raw outputs |
-| `evaluation/` | Metrics, failure taxonomy, summary tables |
+| `evaluation/` | Metrics, failure taxonomy, summary tables; H9: `h9_run.py` (run matrix), `h9_report.py` (tables for the report), doc `docs/decisions/h9_eval.md` |
 | `data/manifests/` | Document ids, sources, and checksums |
 | `data/eval/` | Frozen queries and, later, retrieval judgments |
 | `security_tests/` | Prompt-injection and PII cases |

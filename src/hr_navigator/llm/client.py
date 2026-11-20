@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import time
 from pathlib import Path
@@ -134,6 +135,7 @@ def chat(
     named function. Tools and a schema are not meant to be combined in one call.
     """
     endpoint = endpoint or config.chat_endpoint()
+    use_cache = use_cache and os.environ.get("LLM_CACHE", "1") != "0"  # LLM_CACHE=0: real timings (H9)
     body = _build_body(endpoint.model, messages, schema, max_tokens, temperature, seed,
                        tools, tool_choice)
     key = _cache_key(endpoint.model, body)
