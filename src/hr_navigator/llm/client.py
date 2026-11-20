@@ -61,8 +61,9 @@ def _cache_key(model: str, body: dict[str, Any]) -> str:
 
 
 def _build_body(
-    model: str, messages: list[dict[str, str]], schema: type[BaseModel] | None,
+    model: str, messages: list[dict[str, Any]], schema: type[BaseModel] | None,
     max_tokens: int, temperature: float, seed: int | None,
+    tools: list[dict[str, Any]] | None = None, tool_choice: str | dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     messages = list(messages)
     if schema is not None:
@@ -79,6 +80,9 @@ def _build_body(
     }
     if SEND_SEED and seed is not None:
         body["seed"] = seed
+    if tools:
+        body["tools"] = tools
+        body["tool_choice"] = tool_choice or "auto"
     if schema is not None and USE_RESPONSE_FORMAT:
         body["response_format"] = {
             "type": "json_schema",
@@ -87,8 +91,12 @@ def _build_body(
     return body
 
 
-def _call(client: httpx.Client, body: dict[str, Any], sleep) -> tuple[str, str, Usage]:
-    """One request. Returns (text without think, finish_reason, usage)."""
+def _call(client: httpx.Client, body: dict[str, Any], sleep) -> tuple[str, str, Usage, list[dict]]:
+    """One request. Returns (text without think, finish_reason, usage, tool_calls).
+
+    tool_calls are read from the message, never inferred from finish_reason: a named
+    tool_choice comes back with finish_reason "stop" (probe, 20 Nov).
+    """
     reply = http.post_json(client, "/chat/completions", body, lock=http.CHAT_LOCK, sleep=sleep)
     choice = reply["choices"][0]
     usage = reply.get("usage") or {}
@@ -96,13 +104,16 @@ def _call(client: httpx.Client, body: dict[str, Any], sleep) -> tuple[str, str, 
         strip_think(choice["message"].get("content") or ""),
         choice.get("finish_reason") or "",
         Usage(tokens_in=usage.get("prompt_tokens", 0), tokens_out=usage.get("completion_tokens", 0)),
+        list(choice["message"].get("tool_calls") or []),
     )
 
 
 def chat(
-    messages: list[dict[str, str]],
+    messages: list[dict[str, Any]],
     *,
     schema: type[BaseModel] | None = None,
+    tools: list[dict[str, Any]] | None = None,
+    tool_choice: str | dict[str, Any] | None = None,
     max_tokens: int = 512,
     tag: str = "",
     temperature: float = 0.2,
@@ -117,9 +128,14 @@ def chat(
     With ``schema`` (a pydantic model class) the reply is validated and returned in
     ``ChatResult.parsed``; one retry is made with the error shown to the model, then
     ``SchemaError`` is raised.
+
+    With ``tools`` (OpenAI function specs) the model may answer with tool calls, returned
+    raw in ``ChatResult.tool_calls``; ``tool_choice`` is "auto" (default), "required" or a
+    named function. Tools and a schema are not meant to be combined in one call.
     """
     endpoint = endpoint or config.chat_endpoint()
-    body = _build_body(endpoint.model, messages, schema, max_tokens, temperature, seed)
+    body = _build_body(endpoint.model, messages, schema, max_tokens, temperature, seed,
+                       tools, tool_choice)
     key = _cache_key(endpoint.model, body)
     cache_file = CACHE_DIR / f"{key}.json"
 
@@ -127,11 +143,12 @@ def chat(
         data = json.loads(cache_file.read_text())
         parsed = schema.model_validate_json(_json_text(data["text"])) if schema else None
         return ChatResult(text=data["text"], parsed=parsed, usage=Usage(**data["usage"]),
-                          finish_reason=data["finish_reason"], cached=True)
+                          finish_reason=data["finish_reason"], cached=True,
+                          tool_calls=data.get("tool_calls", []))
 
     client = client or http.make_client(endpoint)
     started = time.perf_counter()
-    text, finish, usage = _call(client, body, sleep)
+    text, finish, usage, tool_calls = _call(client, body, sleep)
     parsed, json_valid = None, True
 
     if schema is not None:
@@ -143,7 +160,7 @@ def chat(
                 {"role": "user", "content": "That was not valid. Fix it and reply with the JSON "
                                             f"object only. Problem: {str(first_error)[:400]}"},
             ])
-            text, finish, usage2 = _call(client, retry, sleep)
+            text, finish, usage2, tool_calls = _call(client, retry, sleep)
             usage = usage + usage2
             try:
                 parsed = schema.model_validate_json(_json_text(text))
@@ -157,6 +174,6 @@ def chat(
     if use_cache:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         cache_file.write_text(json.dumps({"text": text, "usage": usage.model_dump(),
-                                          "finish_reason": finish}))
+                                          "finish_reason": finish, "tool_calls": tool_calls}))
     return ChatResult(text=text, parsed=parsed, usage=usage, latency_ms=latency_ms,
-                      finish_reason=finish, json_valid=json_valid)
+                      finish_reason=finish, json_valid=json_valid, tool_calls=tool_calls)

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>H5 plan: the agent loop</title>
+<style>
+body{font:15px/1.55 system-ui,sans-serif;max-width:980px;margin:0 auto;padding:1rem 1rem 4rem;color:#222}
+h1{margin-bottom:.1rem}h2{margin-top:2rem;border-bottom:1px solid #ddd;padding-bottom:.2rem}
+table{border-collapse:collapse;width:100%;margin:.6rem 0}th,td{border:1px solid #ccc;padding:.35rem .6rem;vertical-align:top;text-align:left}
+th{background:#f3f3f3}pre{background:#f6f6f6;padding:.8rem;overflow:auto;border-radius:6px;font-size:13px;line-height:1.4}
+.note{background:#fff8e1;border-left:4px solid #f0b400;padding:.5rem .9rem;margin:.8rem 0}
+.ok{background:#eefaf1;border-left:4px solid #2a7;padding:.5rem .9rem;margin:.8rem 0}
+.tag{font-size:12px;background:#eef;border-radius:4px;padding:1px 6px}
+label{cursor:pointer}.done td{color:#777;text-decoration:line-through}
+</style>
+<h1>H5 plan: the agent loop</h1>
+<p>Prepared 20 Nov 2026. Window Sat 21 to Mon 23 (8 h). Code freeze Wed 25 Nov night. Status: <b>approved by Himadri</b>, executing one step at a time.
+Tick a step when it is done (ticks are saved in this browser only).</p>
+
+<div class="note"><b>Open point:</b> Akash's <code>search()</code> stub is not ready (confirmed 20 Nov). The loop takes the search function as a parameter, and tests use a fixture search kept under <code>tests/</code>, so nothing clashes with <code>src/hr_navigator/retrieval/</code> when his code lands.</div>
+
+<h2>1. What was checked first</h2>
+<ul>
+<li><code>retrieval/</code> is empty; the real <code>search(query, k=5, filters=None) -&gt; list[Passage]</code> is Akash's.</li>
+<li><code>tools/mock_llm</code> is a proxy to a real local model, not a scripted one. Failure-mode tests therefore use a scripted fake <code>chat()</code>; <code>mock_llm</code> is for a limits and concurrency smoke test only.</li>
+<li>The executor prompt (<code>executor_v1</code>) has never run, because the client cannot send tools yet. That is step 1.</li>
+<li><code>plan.html</code> also lists an "oracle passage" ablation. Himadri said no to an oracle variant, so it is not planned.</li>
+</ul>
+
+<h2>2. The flow</h2>
+<pre>question + session_id + employee_id
+  | load session memory (last 6 turns) ; load profile via get_my_profile (code, not the model)
+  v
+PLAN  (planner_v3, schema Plan)             malformed JSON twice -> fallback plan: route policy, search the question
+  | route
+  |-- clarify / refuse_pii / out_of_scope --------------------+
+  |-- escalate -> escalate_to_hr (H6) -------------------------+
+  |-- refuse_injection -> one policy_search on the question    |
+  '-- policy / hrms / policy_and_hrms                          |
+        v                                                      |
+     EXECUTE loop (executor_v1, native tool calls)             |
+        tools offered depend on the route                      |
+        repeated call -> blocked; 2nd repeat -> leave loop     |
+        bad args / unknown tool / tool error -> fed back       |
+        "DONE", step cap or token budget -> leave loop         |
+        v                                                      v
+ANSWER (answer_v2, schema FinalAnswer, passages best first, trimmed to the token budget)
+  | code checks: check_citations + unsupported_numbers
+  | problem -> ONE revision call with the problem shown
+  | still wrong -> drop bad citations; an "answer" with none left becomes refuse_not_in_corpus
+  v
+CRITIC (critic_v2): advisory by default, logged only
+  v
+AgentResponse: answer, citations, steps (trace), tool_calls, status, usage</pre>
+
+<h2>3. Decisions (all accepted 20 Nov)</h2>
+<table>
+<tr><th>#</th><th>Decision</th><th>Why</th></tr>
+<tr><td>1</td><td><b>Step</b> = one planner, executor, tool, answer-revision or critic action. Total cap 10. At the cap, skip to ANSWER with what was gathered; the trace says <code>step_cap</code>.</td><td>The brief says "10-step cap".</td></tr>
+<tr><td>2</td><td><b>Critic</b> config <code>off | advisory | revise</code>; default <code>advisory</code>.</td><td>Dev runs showed it flags correct drafts. H9 measures V3 with and without it.</td></tr>
+<tr><td>3</td><td><b>Unverifiable citations</b> downgrade to "could not verify"; switch <code>STRICT_CITATIONS</code>.</td><td>Grounded answers, at a possible cost in recall; H9 measures it.</td></tr>
+<tr><td>4</td><td><b>Tools offered</b> depend on the route: policy gets <code>policy_search</code>; hrms gets the HR tools; both gets both.</td><td>An 8B model choosing from 10 tools is a likely failure.</td></tr>
+<tr><td>5</td><td><b>First executor call</b> uses <code>tool_choice="required"</code>; later calls <code>"auto"</code>.</td><td>Stops answering from memory. Verified in the 20 Nov probe.</td></tr>
+<tr><td>6</td><td><b>Session memory</b>: prepend "Earlier in this conversation: ..." (last 3 turns, about 300 tokens, marked untrusted) to the question string.</td><td>The frozen prompts stay unchanged.</td></tr>
+<tr><td>7</td><td><b>Identity</b>: <code>actor_id</code> always comes from the request. Any <code>employee_id</code> argument from the model is removed before the call.</td><td>Existing design rule; gets a test.</td></tr>
+<tr><td>8</td><td><b>Eval variants</b> <code>v2_rag</code> (search once, answer prompt, citation check) and <code>v3_agent</code> are registered in H5.</td><td>About 40 lines; H9 only runs them.</td></tr>
+</table>
+
+<h2>4. Steps (one at a time)</h2>
+<table id="steps">
+<tr><th></th><th>Step</th><th>What</th><th>Est.</th></tr>
+<tr><td><input type="checkbox" data-s="1"></td><td>1 Client tool support</td><td><code>chat(..., tools=, tool_choice=)</code> returns <code>tool_calls</code> on <code>ChatResult</code> (new field). Cache stores them; the request hash includes tools; the 1024 clamp stays. Tests: tools sent, calls parsed, cache hit returns calls. Tell Akash about the new field.</td><td>45 min</td></tr>
+<tr><td><input type="checkbox" data-s="2"></td><td>2 State and budget</td><td><code>agents/state.py</code>: pydantic <code>AgentState</code> (question, profile, plan, passages de-duplicated by chunk id, tool results, seen-call set, step count, trace, usage). <code>agents/budget.py</code>: token estimate (characters / 3, deliberately high; no Qwen tokenizer) and trimming of passages, then tool-result detail, until prompt + 700 fits under 8192.</td><td>45 min</td></tr>
+<tr><td><input type="checkbox" data-s="3"></td><td>3 ToolBox</td><td>Interface <code>schemas(route)</code> and <code>run(name, args, actor)</code>, always returns a dict, never raises. Real adapters: <code>policy_search</code> (wraps the injected search) and the 8 HRMS tools via <code>hrms.agent_tools</code>. Thin part of H6 pulled forward; <code>escalate_to_hr</code>, <code>validate_response</code> and audit checks stay in H6.</td><td>45 min</td></tr>
+<tr><td><input type="checkbox" data-s="4"></td><td>4 Session store</td><td><code>state/session_store.py</code> (SQLite, <code>turns(session_id, employee_id, role, text, ts)</code>). Keeps question and final answer only, each cut to 500 characters; <code>purge(session_id)</code>. "No PII beyond employee id" is limited by what the employee types; stated in the decision doc.</td><td>40 min</td></tr>
+<tr><td><input type="checkbox" data-s="5"></td><td>5 Orchestrator</td><td><code>agents/orchestrator.py</code>, explicit code, about 150 to 200 lines.</td><td>2 h</td></tr>
+<tr><td><input type="checkbox" data-s="6"></td><td>6 Failure-mode tests</td><td>One test per row of section 5, on a scripted fake <code>chat()</code>.</td><td>1.5 h</td></tr>
+<tr><td><input type="checkbox" data-s="7"></td><td>7 Variants and glue</td><td>Register <code>v2_rag</code> and <code>v3_agent</code>. State to <code>RunRecord</code> conversion (retrieved, tool_calls, steps, tokens, combined prompt hash). <code>dev_run --agent</code> runs the 12 dev items with each item's own passages as the search result.</td><td>45 min</td></tr>
+<tr><td><input type="checkbox" data-s="8"></td><td>8 CLI for a real check</td><td><code>scripts/ask.py "question" --employee E...</code> prints the answer and the step trace. Himadri runs it on the real endpoint, Zscaler off.</td><td>20 min</td></tr>
+<tr><td><input type="checkbox" data-s="9"></td><td>9 Docs</td><td><code>docs/decisions/h5_agent_loop.md</code>, short <code>h4_prompts.md</code>, AI-use log, prompt changelog if prompts change.</td><td>30 min</td></tr>
+</table>
+
+<h2>5. Failure modes and their tests</h2>
+<table>
+<tr><th>Failure</th><th>Expected behaviour</th></tr>
+<tr><td>Planner returns malformed JSON twice</td><td>Fallback plan (route policy, search the question); trace says so</td></tr>
+<tr><td>Executor gives bad tool arguments</td><td>Error goes back to the model; two failures in a row leave the loop</td></tr>
+<tr><td>Unknown tool name</td><td><code>run_tool</code> error fed back; counted as a step</td></tr>
+<tr><td>Tool raises or returns <code>ok: false</code></td><td>Recorded in <code>tool_calls</code> with the error; loop continues; answer is not cited from it</td></tr>
+<tr><td>Same call repeated</td><td>Blocked, not executed; a second repeat leaves the loop</td></tr>
+<tr><td>Step cap hit</td><td>Forced ANSWER; trace shows <code>step_cap</code></td></tr>
+<tr><td>Prompt too big for 8192</td><td>Passages trimmed; test with 50 long passages</td></tr>
+<tr><td>Executor replies with text that is not <code>DONE</code> and makes no tool call</td><td>Nudged once, then treated as done</td></tr>
+<tr><td>Answer is malformed JSON twice</td><td>Safe fallback message, <code>status=error</code>, raw text in the trace</td></tr>
+<tr><td>Invented quote or number</td><td>One revision with the problem shown; then downgrade (strict citations)</td></tr>
+<tr><td>Capacity error (429 after retries)</td><td><code>status=error</code> and a friendly message; never a crash</td></tr>
+<tr><td>Search raises or returns nothing</td><td>Tool error logged; ANSWER gets "(no passages)" and refuses</td></tr>
+<tr><td>Model tries to pass an <code>employee_id</code></td><td>Ignored; the session's id is used</td></tr>
+<tr><td>Draft created</td><td><code>status=needs_confirmation</code>; nothing submitted</td></tr>
+<tr><td>Session memory</td><td>Persists across turns, capped at 6 turns, purge works</td></tr>
+</table>
+
+<h2>6. Risks and what cannot be verified before a real run</h2>
+<ul>
+<li><b>How well Qwen3-8B calls tools.</b> The probe showed tool calls are populated, not that the choices are good. Fallbacks in order: narrower tool lists per route (already in), <code>required</code> on every executor step, then a JSON-action schema instead of native calls.</li>
+<li><b>Latency.</b> About 4 to 8 calls per question at about 2 s each, so 8 to 16 s. A full V3 run (80 items x 3 repeats x about 8 calls) is roughly 1 hour. Plan it for Tue 24 at the latest; the cache helps reruns.</li>
+<li><b>Dev passages are hand-picked</b>, so dev results will look better than real retrieval will.</li>
+<li><b>Not yet reviewed by a human:</b> the gold answers, the scorer spot checks and the dev set.</li>
+</ul>
+
+<script>
+const K='h5_plan_steps';let S=JSON.parse(localStorage.getItem(K)||'{}');
+document.querySelectorAll('#steps input').forEach(c=>{const s=c.dataset.s;c.checked=!!S[s];
+ const row=c.closest('tr');row.classList.toggle('done',c.checked);
+ c.onchange=()=>{S[s]=c.checked;localStorage.setItem(K,JSON.stringify(S));row.classList.toggle('done',c.checked)}});
+</script>
+</html>

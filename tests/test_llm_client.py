@@ -191,3 +191,59 @@ def test_schema_and_seed_are_sent_to_server():
     assert sent["seed"] == 7
     assert sent["response_format"]["type"] == "json_schema"
     assert sent["response_format"]["json_schema"]["schema"]["properties"]["days"]
+
+
+# ---- tool calls (H5) -------------------------------------------------------
+
+TOOLS = [{"type": "function", "function": {"name": "policy_search", "description": "search",
+          "parameters": {"type": "object", "properties": {"query": {"type": "string"}}}}}]
+CALL = {"id": "c1", "type": "function",
+        "function": {"name": "policy_search", "arguments": '{"query": "casual leave"}'}}
+
+
+def tool_reply(calls, finish="tool_calls"):
+    return {"choices": [{"message": {"content": None, "tool_calls": calls}, "finish_reason": finish}],
+            "usage": {"prompt_tokens": 20, "completion_tokens": 8}}
+
+
+def test_tools_are_sent_with_auto_by_default():
+    server = FakeServer(reply("DONE"))
+    ask(server, tools=TOOLS)
+    assert server.requests[0]["tools"] == TOOLS
+    assert server.requests[0]["tool_choice"] == "auto"
+
+
+def test_no_tools_means_no_tool_fields():
+    server = FakeServer(reply("hi"))
+    ask(server)
+    assert "tools" not in server.requests[0] and "tool_choice" not in server.requests[0]
+
+
+def test_tool_calls_are_returned_even_when_finish_reason_is_stop():
+    server = FakeServer(tool_reply([CALL], finish="stop"))
+    result = ask(server, tools=TOOLS, tool_choice={"type": "function", "function": {"name": "policy_search"}})
+    assert result.tool_calls == [CALL]
+    assert result.text == ""
+    assert server.requests[0]["tool_choice"]["function"]["name"] == "policy_search"
+
+
+def test_plain_reply_has_no_tool_calls():
+    assert ask(FakeServer(reply("DONE")), tools=TOOLS).tool_calls == []
+
+
+def test_cache_hit_returns_tool_calls_and_tools_change_the_key(tmp_cache):
+    first = ask(FakeServer(tool_reply([CALL])), tools=TOOLS, tool_choice="required")
+    again = ask(FakeServer(), tools=TOOLS, tool_choice="required")  # no response queued: must be cached
+    assert again.cached and again.tool_calls == first.tool_calls == [CALL]
+    other = ask(FakeServer(reply("DONE")), tools=TOOLS, tool_choice="auto")
+    assert not other.cached
+
+
+def test_tool_result_messages_are_passed_through():
+    server = FakeServer(reply("DONE"))
+    msgs = [{"role": "user", "content": "q"},
+            {"role": "assistant", "content": None, "tool_calls": [CALL]},
+            {"role": "tool", "tool_call_id": "c1", "content": '{"ok": true}'}]
+    llm_client.chat(msgs, endpoint=ENDPOINT, client=server.client(), tools=TOOLS, sleep=lambda s: None)
+    assert server.requests[0]["messages"][1]["tool_calls"] == [CALL]
+    assert server.requests[0]["messages"][2]["role"] == "tool"

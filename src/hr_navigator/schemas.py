@@ -51,6 +51,7 @@ class ChatResult(BaseModel):
     cached: bool = False
     finish_reason: str = ""  # "stop", or "length" if the output was cut off
     json_valid: bool = True  # False if a schema was given and validation failed
+    tool_calls: list[dict[str, Any]] = Field(default_factory=list)  # raw OpenAI tool_calls from the message
 
 
 class Citation(BaseModel):
