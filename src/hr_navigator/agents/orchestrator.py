@@ -11,6 +11,7 @@ raises: capacity and network problems become ``status="error"``.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import dataclass
 from typing import Any, Literal
 
@@ -22,6 +23,8 @@ from hr_navigator.agents.state import AgentState
 from hr_navigator.agents.toolbox import POLICY_TOOL, ToolBox
 from hr_navigator.agents.validate import BLOCK_ANSWERS, BLOCK_BEHAVIOUR, validate_response
 from hr_navigator.llm import client, http
+from hr_navigator.observability import tracing
+from hr_navigator.observability.tracing import Tracer, get_tracer
 from hr_navigator.prompts import render
 from hr_navigator.prompts.schemas import Critique, FinalAnswer, Plan
 from hr_navigator.schemas import AgentRequest, AgentResponse, Citation
@@ -48,6 +51,7 @@ class Agent:
     strict_citations: bool = True  # decision 3
     block_unsafe: bool = True  # validate_response: replace unsafe answers (False = note only, for ablation)
     temperature: float = 0.2
+    tracer: Tracer | None = None  # None = the process-wide tracer (off unless TRACE=1 or --trace)
     raise_http_errors: bool = False  # eval runs: stop on capacity/network errors instead of answering "error"
     _seed: int | None = None
 
@@ -55,10 +59,27 @@ class Agent:
     def run(self, request: AgentRequest, seed: int | None = None) -> AgentResponse:
         return self.run_with_state(request, seed)[0]
 
+    @property
+    def _tr(self) -> Tracer:
+        return self.tracer or get_tracer()
+
     def run_with_state(self, request: AgentRequest, seed: int | None = None, *,
                        profile: dict[str, Any] | None = None, rag: bool = False) -> tuple[AgentResponse, AgentState]:
         """``profile`` replaces the HR-system profile (eval items carry their own). ``rag=True`` is the
         v2 baseline: one search by code, then the answer stage, no planner and no tool loop."""
+        with self._tr.span("agent.run", "AGENT", **{tracing.INPUT: request.question, tracing.SESSION: request.session_id,
+                                                    tracing.USER: request.employee_id or "", "app.rag": rag}) as root:
+            response, state = self._run_with_state(request, seed, profile=profile, rag=rag)
+            root.set(**{tracing.OUTPUT: response.answer, "app.status": response.status,
+                        "app.behaviour": state.final_behaviour, "app.steps": state.steps,
+                        tracing.TOK_IN: response.usage.tokens_in, tracing.TOK_OUT: response.usage.tokens_out,
+                        tracing.TOK_TOTAL: response.usage.tokens_in + response.usage.tokens_out})
+            if response.status == "error":
+                root.fail(response.answer)
+            return response, state
+
+    def _run_with_state(self, request: AgentRequest, seed: int | None = None, *,
+                        profile: dict[str, Any] | None = None, rag: bool = False) -> tuple[AgentResponse, AgentState]:
         who = request.employee_id or ""
         memory = self.store.memory_text(request.session_id, who) if self.store else ""
         state = AgentState(question=memory + request.question, employee_id=who,
@@ -84,7 +105,7 @@ class Agent:
         state.plan = Plan(route="policy", reason="single retrieval by code", steps=[state.question[:100]])
         state.step(f"tool {POLICY_TOOL} (by code)")
         self._run_tool(state, POLICY_TOOL, {"query": state.question[:300]}, "policy")
-        return self._answer_and_check(state)
+        return self._answer_stage(state)
 
     def _pipeline(self, state: AgentState) -> FinalAnswer | None:
         state.plan = self._plan(state)
@@ -92,15 +113,22 @@ class Agent:
         if route in ("refuse_injection", "clarify"):  # clarify needs the policy to name the options
             self._search_once(state, state.plan.steps[0] if state.plan.steps else state.question)
         elif route in TOOL_ROUTES:
-            self._execute(state, route)
+            with self._tr.span("executor", "CHAIN", **{"app.route": route}):
+                self._execute(state, route)
         elif route == "escalate":
             state.note("route escalate: no tools; the hand-over to HR is made by code after the answer")
-        return self._answer_and_check(state)
+        return self._answer_stage(state)
 
     def _llm(self, state: AgentState, messages: list[dict], tag: str, *, schema=None, tools=None,
              tool_choice=None, max_tokens: int = 500):
-        result = chat(messages, schema=schema, tools=tools, tool_choice=tool_choice, max_tokens=max_tokens,
-                      tag=tag, temperature=self.temperature, seed=self._seed)
+        with self._tr.span(f"llm {tag}", "LLM", **{tracing.MODEL: os.environ.get("CHAT_MODEL", ""), "app.tag": tag,
+                                                    "app.step": state.steps, "app.messages": len(messages)}) as sp:
+            result = chat(messages, schema=schema, tools=tools, tool_choice=tool_choice, max_tokens=max_tokens,
+                          tag=tag, temperature=self.temperature, seed=self._seed)
+            sp.set(**{tracing.TOK_IN: result.usage.tokens_in, tracing.TOK_OUT: result.usage.tokens_out,
+                      tracing.TOK_TOTAL: result.usage.tokens_in + result.usage.tokens_out,
+                      tracing.FINISH: result.finish_reason, "app.cached": result.cached,
+                      "app.latency_ms": result.latency_ms, "app.tool_calls": len(result.tool_calls)})
         state.usage = state.usage + result.usage
         return result
 
@@ -116,14 +144,17 @@ class Agent:
     # -- plan
     def _plan(self, state: AgentState) -> Plan:
         state.step("plan")
-        try:
-            plan = self._prompt_call(state, "planner", Plan, **self._common(state))
-        except client.SchemaError as exc:
-            state.usage = state.usage + exc.result.usage
-            state.note("planner gave invalid JSON twice: fallback plan (route policy, search the question)")
-            return Plan(route="policy", reason="fallback", steps=[state.question[:100]])
-        state.trace[-1] += f" -> route {plan.route}"
-        return plan
+        with self._tr.span("plan", "CHAIN", **{"app.step": state.steps}) as sp:
+            try:
+                plan = self._prompt_call(state, "planner", Plan, **self._common(state))
+            except client.SchemaError as exc:
+                state.usage = state.usage + exc.result.usage
+                state.note("planner gave invalid JSON twice: fallback plan (route policy, search the question)")
+                sp.set(**{"app.route": "policy", "app.fallback": True})
+                return Plan(route="policy", reason="fallback", steps=[state.question[:100]])
+            state.trace[-1] += f" -> route {plan.route}"
+            sp.set(**{"app.route": plan.route, tracing.OUTPUT: plan.reason})
+            return plan
 
     # -- execute
     def _search_once(self, state: AgentState, query: str) -> None:
@@ -131,10 +162,24 @@ class Agent:
         self._run_tool(state, POLICY_TOOL, {"query": query}, "policy")
 
     def _run_tool(self, state: AgentState, name: str, args: dict[str, Any], route: str):
-        out = self.tools.run(name, args, state.employee_id, route=route)
-        state.record_tool(name, args, out.result, ok=bool(out.result.get("ok")))
-        state.add_passages(out.passages)
+        with self._tr.span(f"tool {name}", "TOOL", **{tracing.TOOL_NAME: name, tracing.TOOL_PARAMS: args,
+                                                      "app.step": state.steps}) as sp:
+            out = self.tools.run(name, args, state.employee_id, route=route)
+            ok = bool(out.result.get("ok"))
+            state.record_tool(name, args, out.result, ok=ok)
+            fresh = state.add_passages(out.passages)
+            sp.set(**{"app.ok": ok, "app.passages": len(out.passages), "app.new_passages": fresh,
+                      tracing.OUTPUT: json.dumps(out.result, ensure_ascii=False, default=str)})
+            if not ok:
+                sp.fail(str((out.result or {}).get("error", "")))
         return out
+
+    def _blocked(self, state: AgentState, name: str, args: dict[str, Any], result: dict[str, Any]) -> None:
+        """A tool call that was not executed (repeat, unavailable, cancel before list): record and trace it."""
+        state.record_tool(name, args, result, ok=False, blocked=True)
+        with self._tr.span(f"tool {name}", "TOOL", **{tracing.TOOL_NAME: name, tracing.TOOL_PARAMS: args,
+                                                      "app.step": state.steps, "app.blocked": True}) as sp:
+            sp.fail(str(result.get("error", "")))
 
     def _execute(self, state: AgentState, route: str) -> None:
         schemas = self.tools.schemas(route)
@@ -179,20 +224,20 @@ class Agent:
             if state.is_repeat(name, args):
                 repeats += 1
                 result = {"ok": False, "error": "repeated_call", "message": "You already made this call. Change it or reply DONE."}
-                state.record_tool(name, args, result, ok=False, blocked=True)
+                self._blocked(state, name, args, result)
                 state.note("repeated call blocked")
                 if repeats >= MAX_REPEATS:
                     state.note("repeated again: leaving the loop")
                     return
             elif name not in [t["function"]["name"] for t in schemas]:
                 result = {"ok": False, "error": "tool_not_available", "message": f"{name!r} is not available now."}
-                state.record_tool(name, args, result, ok=False, blocked=True)
+                self._blocked(state, name, args, result)
                 bad_turns += 1
             elif name == "cancel_leave_request" and not any(
                     r.name == "list_my_requests" and r.ok for r in state.tool_records):
                 result = {"ok": False, "error": "list_first",
                           "message": "Never guess a request id. Call list_my_requests first and use an id from it."}
-                state.record_tool(name, args, result, ok=False, blocked=True)
+                self._blocked(state, name, args, result)
                 state.note("cancel before list_my_requests blocked")
                 bad_turns += 1
             else:
@@ -229,6 +274,12 @@ class Agent:
         tools_text = "\n".join(tool_texts) or "(none)"
         return template.render(**values, passages=passages_text, tool_results=tools_text), passages_text, tools_text
 
+    def _answer_stage(self, state: AgentState) -> FinalAnswer | None:
+        with self._tr.span("answer", "CHAIN", **{"app.passages": len(state.passages)}) as sp:
+            final = self._answer_and_check(state)
+            sp.set(**{"app.behaviour": final.behaviour if final else "none", "app.citations": len(final.citations) if final else 0})
+            return final
+
     def _answer_and_check(self, state: AgentState) -> FinalAnswer | None:
         prompt, passages_text, tools_text = self._answer_prompt(state)
         sources = passages_text + "\n" + tools_text
@@ -252,9 +303,14 @@ class Agent:
 
     def _validate(self, state: AgentState, final: FinalAnswer, sources: str):
         """Run validate_response (code, not a model call) and keep a record of it."""
-        v = validate_response(final, question=state.question, passages=state.passages, tool_records=state.tool_records,
-                              actor_id=state.employee_id, sources=sources, needs_citation=self._needs_citation(state))
-        state.record_code_tool("validate_response", {}, {"ok": True, "issues": [i.code for i in v.issues]})
+        with self._tr.span("validate_response", "TOOL", **{tracing.TOOL_NAME: "validate_response",
+                                                           "app.by_code": True}) as sp:
+            v = validate_response(final, question=state.question, passages=state.passages,
+                                  tool_records=state.tool_records, actor_id=state.employee_id, sources=sources,
+                                  needs_citation=self._needs_citation(state))
+            codes = [i.code for i in v.issues]
+            sp.set(**{"app.issues": ",".join(codes), "app.blocked": bool(v.blocks)})
+        state.record_code_tool("validate_response", {}, {"ok": True, "issues": codes})
         return v
 
     def _assess(self, state: AgentState, final: FinalAnswer, sources: str) -> tuple[FinalAnswer | None, list[str]]:
@@ -271,7 +327,12 @@ class Agent:
     def _escalate(self, state: AgentState, final: FinalAnswer, question: str) -> FinalAnswer:
         """Hand the question to HR after a refusal or escalation: an audit-log note plus the contact."""
         args = {"topic": final.behaviour, "summary": question[:200]}
-        out = self.tools.escalate(state.employee_id, **args)
+        with self._tr.span("escalate_to_hr", "TOOL", **{tracing.TOOL_NAME: "escalate_to_hr", tracing.TOOL_PARAMS: args,
+                                                        "app.by_code": True}) as sp:
+            out = self.tools.escalate(state.employee_id, **args)
+            sp.set(**{"app.ok": bool(out.get("ok")), "app.reference": out.get("reference", "")})
+            if not out.get("ok"):
+                sp.fail(str(out.get("error", "")))
         state.record_code_tool("escalate_to_hr", args, out, ok=bool(out.get("ok")))
         if not out.get("ok"):
             state.note(f"escalate_to_hr failed: {out.get('error')}")
@@ -327,14 +388,17 @@ class Agent:
         if self.critic == "off" or state.at_cap:
             return final
         state.step("critic")
-        try:
-            verdict = self._prompt_call(state, "critic", Critique, behaviour=final.behaviour,
-                                        profile=self._common(state)["profile"], question=state.question,
-                                        passages=passages_text, tool_results=tools_text, draft=final.answer)
-        except client.SchemaError as exc:
-            state.usage = state.usage + exc.result.usage
-            state.note("critic gave invalid JSON: ignored")
-            return final
+        with self._tr.span("critic", "CHAIN", **{"app.step": state.steps}) as sp:
+            try:
+                verdict = self._prompt_call(state, "critic", Critique, behaviour=final.behaviour,
+                                            profile=self._common(state)["profile"], question=state.question,
+                                            passages=passages_text, tool_results=tools_text, draft=final.answer)
+            except client.SchemaError as exc:
+                state.usage = state.usage + exc.result.usage
+                state.note("critic gave invalid JSON: ignored")
+                sp.fail("invalid JSON")
+                return final
+            sp.set(**{tracing.OUTPUT: verdict.verdict, "app.issues": "; ".join(verdict.issues)})
         state.trace[-1] += f" -> {verdict.verdict}" + (f": {'; '.join(verdict.issues)}"[:200] if verdict.issues else "")
         if self.critic == "revise" and verdict.verdict == "revise" and not state.at_cap:
             return self._revise(state, final, messages, verdict.issues or ["the critic asked for a revision"], "critic")
