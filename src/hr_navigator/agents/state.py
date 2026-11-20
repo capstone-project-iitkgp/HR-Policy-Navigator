@@ -38,6 +38,7 @@ class AgentState(BaseModel):
     steps: int = 0
     trace: list[str] = Field(default_factory=list)  # one short line per step, goes to AgentResponse.steps
     usage: Usage = Field(default_factory=Usage)
+    final_behaviour: str = ""  # behaviour of the final answer, "" if there was none
 
     def step(self, note: str) -> None:
         """Count one step and log it."""

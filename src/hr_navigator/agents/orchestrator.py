@@ -44,29 +44,42 @@ class Agent:
     critic: Literal["off", "advisory", "revise"] = "advisory"  # decision 2
     strict_citations: bool = True  # decision 3
     temperature: float = 0.2
+    raise_http_errors: bool = False  # eval runs: stop on capacity/network errors instead of answering "error"
     _seed: int | None = None
 
     # ---- public ---------------------------------------------------------
     def run(self, request: AgentRequest, seed: int | None = None) -> AgentResponse:
         return self.run_with_state(request, seed)[0]
 
-    def run_with_state(self, request: AgentRequest, seed: int | None = None) -> tuple[AgentResponse, AgentState]:
+    def run_with_state(self, request: AgentRequest, seed: int | None = None, *,
+                       profile: dict[str, Any] | None = None, rag: bool = False) -> tuple[AgentResponse, AgentState]:
+        """``profile`` replaces the HR-system profile (eval items carry their own). ``rag=True`` is the
+        v2 baseline: one search by code, then the answer stage, no planner and no tool loop."""
         who = request.employee_id or ""
         memory = self.store.memory_text(request.session_id, who) if self.store else ""
         state = AgentState(question=memory + request.question, employee_id=who,
-                           profile=self.tools.profile(who) if who else {})
+                           profile=profile if profile is not None else (self.tools.profile(who) if who else {}))
         self._seed = seed
         try:
-            final = self._pipeline(state)
+            final = self._rag_pipeline(state) if rag else self._pipeline(state)
         except (http.LLMHTTPError, httpx.TransportError) as exc:
+            if self.raise_http_errors:
+                raise
             state.note(f"stopped: {type(exc).__name__}")
             return self._response(state, None, BUSY_MESSAGE, "error"), state
+        state.final_behaviour = final.behaviour if final else ""
         response = self._response(state, final, final.answer if final else "", None)
         if self.store and response.status != "error":
             self.store.add_turn(request.session_id, who, request.question, response.answer)
         return response, state
 
     # ---- stages ---------------------------------------------------------
+    def _rag_pipeline(self, state: AgentState) -> FinalAnswer | None:
+        state.plan = Plan(route="policy", reason="single retrieval by code", steps=[state.question[:100]])
+        state.step(f"tool {POLICY_TOOL} (by code)")
+        self._run_tool(state, POLICY_TOOL, {"query": state.question[:300]}, "policy")
+        return self._answer_and_check(state)
+
     def _pipeline(self, state: AgentState) -> FinalAnswer | None:
         state.plan = self._plan(state)
         route = state.plan.route

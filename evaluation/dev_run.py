@@ -1,6 +1,6 @@
 """Dev loop for the H4 prompts: planner -> answer -> critic on data/dev/dev_v1.jsonl.
 
-    python -m evaluation.dev_run [--out FILE] [--limit N]
+    python -m evaluation.dev_run [--out FILE] [--limit N] [--agent]
 
 Passages come with each dev item (no retrieval, no tools). This is for reading outputs and
 fixing prompts, NOT a result: the items are few and were written alongside the prompts.
@@ -68,18 +68,50 @@ def run_item(item: dict, today: str = "2026-11-20") -> dict:
     return out
 
 
+def run_item_agent(item: dict, today: str = "2026-11-20") -> dict:
+    """The full loop on a dev item. The item's own passages are the search result (every query gets
+    all of them, in order), so this tests the loop and the prompts, not retrieval."""
+    from hr_navigator.agents.orchestrator import Agent
+    from hr_navigator.agents.toolbox import ToolBox
+    from hr_navigator.schemas import AgentRequest
+
+    passages = [Passage(**p) for p in item["passages"]]
+    agent = Agent(ToolBox(lambda query, k=5, filters=None: passages))
+    out = {"qid": item["qid"], "expected": item["expected_behaviour"], "expected_route": item["expected_route"]}
+    try:
+        resp, state = agent.run_with_state(AgentRequest(question=item["question"], session_id="", employee_id=None),
+                                           seed=0, profile=dict(item["employee_context"], today=today))
+        route = state.plan.route if state.plan else ""
+        shown = render.format_passages(state.passages)
+        out.update(route=route, route_ok=route.startswith(item["expected_route"]) or (
+                       item["expected_route"] == "policy" and route == "policy_and_hrms"),
+                   behaviour=state.final_behaviour, answer=resp.answer, status=resp.status,
+                   behaviour_ok=state.final_behaviour == item["expected_behaviour"],
+                   facts_ok=all(m.lower() in resp.answer.lower() for m in item["must_include"]),
+                   citation_problems=[] if resp.citations or state.final_behaviour != "answer" else ["no citations"],
+                   unsupported_numbers=render.unsupported_numbers(resp.answer, shown, item["question"]),
+                   steps=state.steps, tool_calls=[t["name"] for t in resp.tool_calls],
+                   trace=[s["note"] for s in resp.steps], tokens=resp.usage.tokens_in + resp.usage.tokens_out)
+        critic = [s["note"] for s in resp.steps if "critic ->" in s["note"]]
+        out["critic"] = critic[0].split("-> ")[1][:6] if critic else "-"
+    except Exception as exc:  # noqa: BLE001
+        out["error"] = f"{type(exc).__name__}: {str(exc)[:200]}"
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--out", default=f"evaluation/results/dev_h4_{datetime.date.today()}.jsonl")
+    ap.add_argument("--out", default=None)
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--agent", action="store_true", help="run the full H5 loop instead of planner->answer->critic")
     args = ap.parse_args(argv)
     items = [json.loads(l) for l in DEV.read_text().splitlines() if l.strip()][: args.limit]
-    out = Path(args.out)
+    out = Path(args.out or f"evaluation/results/dev_{'h5' if args.agent else 'h4'}_{datetime.date.today()}.jsonl")
     out.parent.mkdir(parents=True, exist_ok=True)
     rows = []
     with out.open("w", encoding="utf-8") as f:
         for item in items:
-            row = run_item(item)
+            row = (run_item_agent if args.agent else run_item)(item)
             rows.append(row)
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             print(f"{row['qid']} exp={row['expected']:<20} got={row.get('behaviour', 'ERROR'):<20} "

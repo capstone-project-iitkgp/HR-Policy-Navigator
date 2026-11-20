@@ -27,7 +27,7 @@ from evaluation import evalset
 from evaluation.records import RunRecord
 import httpx
 
-from evaluation import baselines  # noqa: F401  (registers the v0_* variants)
+from evaluation import agent_variants, baselines  # noqa: F401  (register the v0_*, v2_rag, v3_* variants)
 from evaluation.variants import VARIANTS
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
