@@ -36,11 +36,11 @@ def _body(text="hi", **kw):
     return {"messages": [{"role": "user", "content": text}], **kw}
 
 
-def test_max_tokens_defaulted_and_clamped():
+def test_max_tokens_defaulted_and_rejected_above_cap():
     body, notes, rej = apply_token_budget(_body())
     assert rej is None and body["max_tokens"] == MAX_OUTPUT_TOKENS and notes
-    body, notes, rej = apply_token_budget(_body(max_tokens=4000))
-    assert rej is None and body["max_tokens"] == MAX_OUTPUT_TOKENS
+    _, _, rej = apply_token_budget(_body(max_tokens=4000))  # the real API rejects, it does not clamp
+    assert rej is not None and rej.status == 400 and "between 1 and 1024" in rej.message
     body, notes, rej = apply_token_budget(_body(max_tokens=200))
     assert body["max_tokens"] == 200 and notes == []
 

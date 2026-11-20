@@ -17,7 +17,7 @@ A scripted or canned mode was considered and rejected for now. Tests that need n
 
 ## Assumptions (UNVERIFIED against the real API)
 - A second concurrent request returns 429 (it could instead queue). `--queue` switches this.
-- `max_tokens` above 1024 is clamped (it could instead be rejected).
+- ~~`max_tokens` above 1024 is clamped~~: VERIFIED 20 Nov that the real API rejects it with HTTP 400; the mock now does the same.
 - No embeddings endpoint. The 13 Nov embedding email may change this.
 - Prompt size is estimated as characters / 4.
 Re-check these in mentor session #2 or with a smoke test, then update `limits.py` and the README table.

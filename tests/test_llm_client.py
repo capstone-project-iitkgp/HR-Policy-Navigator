@@ -182,3 +182,12 @@ def test_missing_config_names_variable(monkeypatch, tmp_path):
     monkeypatch.delenv("CHAT_BASE_URL", raising=False)
     with pytest.raises(RuntimeError, match="CHAT_BASE_URL"):
         config.chat_endpoint()
+
+
+def test_schema_and_seed_are_sent_to_server():
+    server = FakeServer(reply('{"verdict": "ok", "days": 3}'))
+    ask(server, schema=Answer, seed=7)
+    sent = server.requests[0]
+    assert sent["seed"] == 7
+    assert sent["response_format"]["type"] == "json_schema"
+    assert sent["response_format"]["json_schema"]["schema"]["properties"]["days"]

@@ -26,9 +26,9 @@ CACHE_DIR = Path(".cache/llm")
 
 # Defaults from the Qwen3 model card for non-thinking mode (guide 9c.1).
 SAMPLING = {"top_k": 20}
-# Set after the 9c.2 probes (docs/decisions/h1_llm_client.md): does the server honour these?
-USE_RESPONSE_FORMAT = False  # send response_format=json_schema when a schema is given
-SEND_SEED = False  # send "seed" when the caller passes one
+# Set from the 20 Nov probes on the real endpoint (docs/decisions/h1_llm_client.md).
+USE_RESPONSE_FORMAT = True  # server enforces response_format=json_schema (an enum value was forced)
+SEND_SEED = True  # server accepted seed; repeated calls were identical (one sample, see the decision doc)
 
 
 class SchemaError(Exception):

@@ -39,7 +39,7 @@ def post(client, body):
     try:
         r = client.post("/chat/completions", json=body)
     except httpx.HTTPError as exc:
-        return {"error": type(exc).__name__}
+        return {"error": f"{type(exc).__name__}: {str(exc)[:150]}"}
     out = {"status": r.status_code, "seconds": round(time.perf_counter() - start, 2)}
     try:
         data = r.json()
@@ -101,8 +101,8 @@ def main() -> None:
     # Second concurrent request: 429 or queued?
     results: list = []
     slow = {**base, **off, "max_tokens": 300, "messages": [{"role": "user", "content": "Write 150 words about leave."}]}
-    t = threading.Thread(target=lambda: results.append(post(httpx.Client(base_url=ep.base_url, verify=ep.ca_cert or True,
-                         headers={"Authorization": f"Bearer {ep.api_key}"}, timeout=120), slow)))
+    other = http.make_client(ep)  # same settings as the main client (CA file, key), separate connection
+    t = threading.Thread(target=lambda: results.append(post(other, slow)))
     t.start()
     time.sleep(0.5)
     report["concurrent_second_request"] = post(client, {**base, **off, "messages": PROMPT})

@@ -107,7 +107,7 @@ Exit codes: 2 usage error (for example no `--model` without a terminal), 3 backe
 | 1 concurrent request | A second request while one is running gets 429 plus `Retry-After: 1` (or waits with `--queue`) | Limit reported by the course. **How** it is enforced (429 or queueing) is UNVERIFIED. |
 | 60 requests/min | Sliding window, 429 plus `Retry-After` when exceeded | Number reported by the course; source unclear. |
 | 8192 tokens input + output | 400 `context_length_exceeded` if estimated prompt + `max_tokens` exceeds it | Limit reported. The prompt size here is an **estimate** (characters / 4), not a real tokenizer count. |
-| 1024 max output | `max_tokens` above 1024 is clamped to 1024, and a missing one defaults to 1024. The response carries an `X-Mock-LLM-Notes` header. | Limit reported. Clamp-or-reject is UNVERIFIED. |
+| 1024 max output | `max_tokens` above 1024 is rejected with HTTP 400 (`output token limit must be between 1 and 1024`); a missing one defaults to 1024. The response carries an `X-Mock-LLM-Notes` header. | Limit reported; reject-not-clamp VERIFIED on the real API 20 Nov. |
 | No embeddings endpoint | `/v1/embeddings` returns 404 | UNVERIFIED. The 13 Nov embedding email may change this. |
 | Model name | Always the alias above | Real API serves `Qwen/Qwen3-8B`. |
 
