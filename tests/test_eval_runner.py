@@ -86,3 +86,16 @@ def test_mock_endpoint_tags_records(tmp_path, monkeypatch):
     out = tmp_path / "r.jsonl"
     run_eval.run("demo", "eval_v1", 1, out, limit=1, log=lambda m: None)
     assert lines(out)[0]["tag"] == "mock"
+
+
+def test_connection_error_stops_run_without_error_records(tmp_path):
+    import httpx
+
+    @register("no_net")
+    def no_net(item, repeat):
+        raise httpx.ConnectError("reset by peer")
+
+    out = tmp_path / "r.jsonl"
+    with pytest.raises(SystemExit, match="cannot reach the endpoint"):
+        run_eval.run("no_net", "eval_v1", 1, out, limit=3, log=lambda m: None)
+    assert not out.read_text()

@@ -25,6 +25,9 @@ from urllib.parse import urlparse
 
 from evaluation import evalset
 from evaluation.records import RunRecord
+import httpx
+
+from evaluation import baselines  # noqa: F401  (registers the v0_* variants)
 from evaluation.variants import VARIANTS
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
@@ -89,6 +92,10 @@ def run(variant: str, eval_name: str, repeats: int, out: Path, qids=None, types=
                 except LLMCapacityError as exc:
                     raise SystemExit(f"Stopped at {item['qid']} repeat {repeat}: endpoint at capacity ({exc}). "
                                      "Re-run the same command later; finished records are kept.")
+                except httpx.TransportError as exc:  # no connection (Zscaler on? VPN? server down?)
+                    raise SystemExit(f"Stopped at {item['qid']} repeat {repeat}: cannot reach the endpoint "
+                                     f"({type(exc).__name__}: {str(exc)[:150]}). Nothing was recorded for this "
+                                     "question; fix the connection and re-run the same command.")
                 except Exception as exc:  # noqa: BLE001 - one bad question must not end the run
                     record = RunRecord(qid=item["qid"], variant=variant, repeat=repeat,
                                        error=f"{type(exc).__name__}: {str(exc)[:300]}",
