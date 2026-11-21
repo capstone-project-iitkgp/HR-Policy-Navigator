@@ -72,3 +72,12 @@ def test_corpus_allowlist_is_built_from_the_documents():
     allow = corpus_allowlist()
     assert isinstance(allow, frozenset)
     assert all("@" in v or any(ch.isdigit() for ch in v) for v in allow)
+
+
+def test_hr_contact_in_the_hand_over_note_is_not_masked():
+    """Found in the live Docker run: the escalation note's HR address was masked."""
+    from hrms.rules import HR_CONTACT
+
+    note = f"I have noted this for HR (reference ESC-2). Contact: {HR_CONTACT['DEF']}."
+    out, found = redact(note, allow=corpus_allowlist())
+    assert found == [] and out == note

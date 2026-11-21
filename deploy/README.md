@@ -47,6 +47,12 @@ keyword-only (BM25) mode.
 ## Checked on 20 Nov 2026 (Akash's laptop, no .env)
 
 `docker compose build` and `up` work; both services healthy; `/health` and `/chat/status` answer;
-the 11th `/chat` request in a minute from one session gets 429; the chat page loads. **Not yet
-checked:** a real answer through Docker (needs `.env`, the CA files and the endpoints), and a run
-from a fresh clone on another machine.
+the 11th `/chat` request in a minute from one session gets 429; the chat page loads.
+
+## Checked on 21 Nov 2026 (Akash's laptop, real chat endpoint :1033, keyword search only)
+
+With `.env` and `certs/vm05-ca.crt`: `/chat` inside Docker reaches Qwen3-8B and returns a full
+agent run (plan, search, answer, citation check, hand-over to HR). Embeddings are not checked yet:
+`certs/vm02-ca.crt` (from the embeddings access zip) is still missing, so `/chat/status` says
+`dense: false`. **Not yet checked:** hybrid search in Docker, and a run from a fresh clone on
+another machine.

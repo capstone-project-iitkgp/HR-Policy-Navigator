@@ -42,12 +42,20 @@ def redact(text: str, allow: set[str] | frozenset[str] = frozenset()) -> tuple[s
 
 @lru_cache(maxsize=1)
 def corpus_allowlist() -> frozenset[str]:
-    """Emails and phone numbers printed in the policy corpus itself."""
+    """Emails and phone numbers that are public: printed in the policy corpus, or the HR contact
+    that the agent's hand-over note gives (hrms/rules.py HR_CONTACT)."""
     from hr_navigator.ingestion.corpus import load_corpus
 
+    sources = [doc.text for doc in load_corpus()]
+    try:
+        from hrms.rules import HR_CONTACT
+
+        sources.extend(HR_CONTACT.values())
+    except ImportError:  # the HR system is optional for retrieval-only use
+        pass
     values: set[str] = set()
-    for doc in load_corpus():
+    for text in sources:
         for kind, pattern in PATTERNS:
             if kind in ("email", "phone"):
-                values.update(m.group(0).strip() for m in pattern.finditer(doc.text))
+                values.update(m.group(0).strip() for m in pattern.finditer(text))
     return frozenset(values)
