@@ -21,6 +21,12 @@ organisations (``last_info["org_from_query"]``). BM25 alone gives the organisati
 little weight: "DEF probation period" ranked another organisation's probation rules first.
 ``org_from_query=False`` turns this off (the recall@k harness measures both).
 
+Home organisation: ``filters={"home_org": "DEF"}`` is the asking employee's organisation (the agent
+passes it from the HR profile). It is used only when there is no ``org`` filter and the query names
+no organisation, so "How long is probation for me?" stays inside the employee's own policy while
+"What is Iowa's travel policy?" still goes to Iowa. A home organisation that is not in the corpus
+is ignored. Found in the live run: without it, a DEF employee got BLDEDU's probation rule.
+
 Results: best first, at most ``k``, never a passage that looks like an injected instruction
 (see safeguards/untrusted.py). ``Passage.scores`` holds the scores that were computed: "bm25",
 "dense", "rrf". There is no reranker yet (see docs/decisions/a4_retrieval.md).
@@ -44,6 +50,7 @@ log = logging.getLogger(__name__)
 
 MODES = ("auto", "bm25", "dense", "hybrid")
 FILTER_KEYS = ("doc_id", "org", "jurisdiction", "category", "synthetic")
+HOME_ORG = "home_org"  # not a filter on passages; see the module docstring
 CANDIDATES = 50  # how deep each ranker looks before fusion
 
 _index: Index | None = None
@@ -136,11 +143,16 @@ def search(query: str, k: int = 5, filters: dict | None = None, *, mode: str | N
     index = index or get_index()
     info: dict[str, Any] = {"query": query, "k": k, "filters": filters or {}, "degraded": False, "dropped": []}
     use = _resolve_mode(index, mode)
-    if org_from_query and not (filters or {}).get("org") and query:
+    filters = dict(filters or {})
+    home = filters.pop(HOME_ORG, None)
+    if org_from_query and not filters.get("org") and query:
         named = orgs_named(index, query)
         if named:
-            filters = {**(filters or {}), "org": ";".join(named)}
+            filters["org"] = ";".join(named)
             info["org_from_query"] = named
+    if home and not filters.get("org") and _allowed(index, {"org": home}):
+        filters["org"] = str(home)
+        info["home_org"] = str(home)
     matching = _allowed(index, filters)
     allowed = [i for i in matching if not index.flags[i]]
     info["dropped"] = [index.passages[i].chunk_id for i in matching if index.flags[i]]

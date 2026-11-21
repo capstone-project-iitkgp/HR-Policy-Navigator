@@ -194,6 +194,29 @@ def test_an_org_named_in_the_query_narrows_the_search(index):
     assert {p.doc_id for p in search("casual leave at Alpha", filters={"org": "Beta"}, index=index)} <= {"B-1"}
 
 
+def test_home_org_is_used_only_when_the_query_names_no_org(index):
+    home = {"home_org": "University of Beta"}  # Gamma is the planted fixture, always dropped
+    query = "leave days claims trip"
+    assert {p.doc_id for p in search(query, k=10, mode="bm25", index=index)} == {"A-1", "B-1"}
+    assert {p.doc_id for p in search(query, k=10, filters=home, mode="bm25", index=index)} == {"B-1"}
+    assert engine.last_info["home_org"] == "University of Beta"
+    # the query names Alpha: the question is about Alpha, not the employee's own policy
+    assert {p.doc_id for p in search("casual leave at Alpha", k=10, filters=home, index=index)} == {"A-1"}
+    # an explicit org filter wins
+    assert {p.doc_id for p in search("casual leave", filters={**home, "org": "Alpha"}, index=index)} == {"A-1"}
+    # an organisation that is not in the corpus is ignored, not a filter that finds nothing
+    assert {p.doc_id for p in search(query, k=10, filters={"home_org": "Zeta"},
+                                     mode="bm25", index=index)} == {"A-1", "B-1"}
+
+
+def test_real_corpus_planner_query_stays_in_the_employees_org():
+    """The live-run bug: D010 (DEF) asked about probation and got BLDEDU's rule."""
+    engine.set_index(None)
+    query = "probation duration for S02 grade and FT_PERMANENT category"
+    assert {p.doc_id for p in search(query, filters={"home_org": "DEF"})} == {"DOC-008"}
+    assert {p.doc_id for p in search(query, filters={"home_org": "BLDEDU"})} == {"DOC-009"}
+
+
 def test_real_corpus_query_naming_def_stays_in_def():
     engine.set_index(None)
     assert {p.doc_id for p in search("DEF probation period length")} == {"DOC-008"}
