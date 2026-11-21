@@ -31,6 +31,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"index {index.version}: {len(index.docs)} documents, {len(index.passages)} chunks, "
           f"estimated tokens per indexed chunk min/avg/max {min(tokens)}/{sum(tokens) // len(tokens)}/{max(tokens)}")
     print(f"dense: {'on' if index.dense is not None else 'off'}; built in {time.time() - t0:.1f} s")
+    cut = getattr(index.embedder, "truncated", 0)
+    if cut:
+        print(f"note: {cut} chunk(s) were over the 512-token embedding limit; only their first part was embedded")
     for note in index.notes:
         print("note:", note)
     return 0

@@ -52,7 +52,9 @@ the 11th `/chat` request in a minute from one session gets 429; the chat page lo
 ## Checked on 21 Nov 2026 (Akash's laptop, real chat endpoint :1033, keyword search only)
 
 With `.env` and `certs/vm05-ca.crt`: `/chat` inside Docker reaches Qwen3-8B and returns a full
-agent run (plan, search, answer, citation check, hand-over to HR). Embeddings are not checked yet:
-`certs/vm02-ca.crt` (from the embeddings access zip) is still missing, so `/chat/status` says
-`dense: false`. **Not yet checked:** hybrid search in Docker, and a run from a fresh clone on
-another machine.
+agent run (plan, search, answer, citation check, hand-over to HR).
+
+Later the same day, with the embeddings key and `certs/vm02-ca.crt`: the build command above filled
+the `app-cache` volume (591 chunks, 33 s), `/chat/status` says `dense: true`, and D010's "How long is
+probation for me?" got "three months" with a verified DEF citation. **Not yet checked:** a run from
+a fresh clone on another machine.

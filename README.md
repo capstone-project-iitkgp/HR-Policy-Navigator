@@ -63,13 +63,13 @@ Run it from this folder with `python -m uvicorn` (not the bare `uvicorn` command
 
 `POST /chat` takes `{"question", "session_id", "employee_id"}` and returns the agent's answer with citations (rate limit 10 per session per minute, response cache, PII redaction; see `src/hr_navigator/api/chat.py`). `GET /chat/status` shows the retrieval index in use.
 
-Policy search works offline (BM25) with no key. To add embedding search, fill the `EMBED_*` settings in `.env` and run once:
+Policy search works offline (BM25) with no key. To add embedding search, fill the `EMBED_*` settings in `.env` (the embeddings server has its own key and CA file, from `VM02_Embeddings_Access.zip`) and run once. After that, search is hybrid (keyword plus embedding), which finds the evidence for more questions (see `docs/decisions/a4_retrieval.md`):
 
 ```bash
 python -m hr_navigator.retrieval.build --dense
 ```
 
-Retrieval quality on the frozen eval set: `python -m evaluation.retrieval_eval` (writes `evaluation/retrieval_results.md`). With Docker: `docker compose up --build` (see `deploy/README.md`).
+Retrieval quality on the frozen eval set: `python -m evaluation.retrieval_eval --modes bm25 dense hybrid` (writes `evaluation/retrieval_results.md`; without embeddings, leave out `--modes`). With Docker: `docker compose up --build` (see `deploy/README.md`).
 
 ## Local LLM stand-in
 

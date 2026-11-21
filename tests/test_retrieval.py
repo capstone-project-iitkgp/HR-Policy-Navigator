@@ -96,6 +96,28 @@ def test_embedder_batches_of_16_and_caches(tmp_path):
     assert fake.calls == 3  # all cached
 
 
+def test_a_text_over_the_token_limit_is_cut_to_fit_and_cached_under_its_full_text(tmp_path):
+    """The real endpoint answers 422 with its own token count; the chunker's estimate can be low."""
+    from hr_navigator.llm.http import LLMHTTPError
+
+    sent = []
+
+    class TooLong(FakeEmbed):
+        def __call__(self, texts):
+            sent.append(list(texts))
+            for t in texts:
+                if len(t.split()) > 20:  # this fake counts one token per word, limit 20
+                    raise LLMHTTPError(422, f"`inputs` must have less than 20 tokens. Given: {len(t.split())}")
+            return super().__call__(texts)
+
+    e = embedder(tmp_path, TooLong())
+    long_text = "casual leave   rules " * 30  # 90 words, with layout spaces
+    m = e.embed(["sick leave", long_text])
+    assert m.shape == (2, 8) and e.truncated == 1
+    assert all(len(t.split()) < 20 for t in sent[-1])  # what was finally sent fits
+    assert e.embed([long_text], cached_only=True).shape == (1, 8)  # cached under the full text
+
+
 def test_cached_only_never_calls_the_endpoint(tmp_path):
     fake = FakeEmbed()
     with pytest.raises(EmbeddingUnavailable):
@@ -222,7 +244,8 @@ def test_real_corpus_query_naming_def_stays_in_def():
     assert {p.doc_id for p in search("DEF probation period length")} == {"DOC-008"}
 
 
-def test_auto_mode_is_hybrid_when_embeddings_exist(index):
+def test_auto_mode_is_hybrid_when_embeddings_exist(index, monkeypatch):
+    monkeypatch.delenv("RETRIEVAL_MODE")  # conftest pins bm25; this test checks "auto" (fake embedder)
     results = search("casual leave", index=index)
     assert engine.last_info["mode"] == "hybrid"
     assert set(results[0].scores) == {"bm25", "dense", "rrf"}

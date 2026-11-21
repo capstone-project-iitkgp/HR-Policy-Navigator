@@ -12,14 +12,19 @@ keyed by the model name and the exact text, so each chunk is embedded once.
 ``Embedder.cached_only`` never calls the endpoint. Search uses it to decide whether the dense
 index is complete (``python -m hr_navigator.retrieval.build --dense`` fills the cache).
 
-Not verified on the real endpoint from this laptop (no key or CA file here): the response shape is
-the OpenAI one (``data[i].embedding``), as in the course quickstart. The query prefix below is the
-one bge v1.5 recommends for short queries; its effect here is not measured.
+Checked on the real endpoint on 21 Nov 2026: the reply has the OpenAI shape (``data[i].embedding``).
+Too long for the model: the endpoint counts tokens with the real tokenizer and answers HTTP 422
+"must have less than 512 tokens. Given: N". The chunker's estimate (words x 1.3) is sometimes far
+below that (one chunk was 725 real tokens), so on that error each text of the batch is sent alone
+and an over-long text is cut to fit, using N from the message. Only the text sent for embedding is
+cut; the cache key and the passage text stay the full chunk. ``Embedder.truncated`` counts them.
+The query prefix below is the one bge v1.5 recommends for short queries; its effect is not measured.
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 import threading
 from pathlib import Path
 from typing import Callable
@@ -33,6 +38,8 @@ CACHE_DIR = Path(__file__).resolve().parents[3] / ".cache" / "embeddings"
 BATCH = 16  # endpoint limit
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 EMBED_LOCK = threading.Lock()  # one embeddings request at a time from this process
+MAX_TOKENS = 512  # endpoint limit, counted by the server's tokenizer
+_TOO_LONG = re.compile(r"less than (\d+) tokens\. Given: (\d+)")
 
 
 class EmbeddingUnavailable(RuntimeError):
@@ -53,6 +60,7 @@ class Embedder:
         self._post = post
         self.model = model or (endpoint.model if endpoint else None)
         self.cache_dir = cache_dir
+        self.truncated = 0  # texts cut to fit the token limit (see the module docstring)
 
     # ---- configuration ----------------------------------------------------
     def _resolved(self) -> Endpoint:
@@ -105,7 +113,12 @@ class Embedder:
             raise EmbeddingUnavailable(f"{len(missing)} of {len(texts)} texts have no cached embedding")
         for start in range(0, len(missing), BATCH):
             batch = missing[start:start + BATCH]
-            vectors = self._call([texts[i] for i in batch])
+            try:
+                vectors = self._call([texts[i] for i in batch])
+            except http.LLMHTTPError as exc:
+                if not _TOO_LONG.search(str(exc)):
+                    raise
+                vectors = [self._call_fitted(texts[i]) for i in batch]  # find and cut the long ones
             for i, v in zip(batch, vectors):
                 vec = _normalise(np.asarray([v], dtype=np.float32))[0]
                 self._save(texts[i], vec)
@@ -113,6 +126,24 @@ class Embedder:
         if not rows:
             return np.zeros((0, 0), dtype=np.float32)
         return _normalise(np.vstack(rows))
+
+    def _call_fitted(self, text: str, attempts: int = 4) -> list[float]:
+        """Embed one text; if the server says it is too long, cut it to fit and try again."""
+        sent = text
+        for _ in range(attempts):
+            try:
+                vector = self._call([sent])[0]
+                self.truncated += sent != text
+                return vector
+            except http.LLMHTTPError as exc:
+                m = _TOO_LONG.search(str(exc))
+                if not m:
+                    raise
+                limit, given = int(m.group(1)), int(m.group(2))
+                flat = " ".join(sent.split())  # layout spaces carry no meaning for the vector
+                keep = int(len(flat) * (limit - 24) / given)  # a small margin under the limit
+                sent = flat[:max(1, keep)]
+        raise http.LLMHTTPError(422, f"text still too long after {attempts} cuts")
 
     def embed_query(self, query: str) -> np.ndarray:
         return self.embed([QUERY_PREFIX + query])[0]

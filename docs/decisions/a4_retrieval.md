@@ -1,8 +1,8 @@
 # A2 to A5: corpus, chunking, retrieval and recall@k (Akash)
 
-Status 20 Nov 2026: built and tested offline (BM25). Dense and hybrid modes are built and unit-tested
-with a fake embedder, but **not yet run against the real embeddings endpoint** (no key or CA file on
-this laptop). Claude drafted the code; Akash reviews (see `docs/ai_use_log.md`).
+Status 21 Nov 2026: BM25, dense and hybrid all run against the real embeddings endpoint (:1035)
+and are measured below. Hybrid is the default once the embedding cache is built. Claude drafted
+the code; Akash reviews (see `docs/ai_use_log.md`).
 
 ## What the agent gets
 
@@ -25,7 +25,10 @@ as asked in `docs/for_akash_status_20nov.html`:
    so a fresh clone needs no download. The downloader and the 30 seed URLs are not on this laptop;
    growing the corpus is still open (A2), and the report must give the real count: 8.
 2. **Chunker:** whole lines up to a token target, with about 50 tokens of line overlap. Token
-   counts are estimated (words and punctuation x 1.3), not measured with the bge tokenizer.
+   counts are estimated (words and punctuation x 1.3). The real bge tokenizer counts more on some
+   chunks (one was 725 tokens). The endpoint rejects texts over 512 tokens with its own count, so the
+   embedder then sends the long text alone, cut to fit (`retrieval/dense.py`). Only the embedding
+   input is cut, never `Passage.text`. At 300/50 this affects 3 of 591 chunks.
 3. **BM25 written out in full** (`retrieval/bm25.py`, about 50 lines) instead of `rank_bm25`: no new
    dependency, easy to explain. Stemming is available but off (see recall@k). Each chunk is ranked with a short header
    (title, organisation, aliases, jurisdiction) in front, so "DEF" or "Kentucky" in a question finds
@@ -40,11 +43,30 @@ as asked in `docs/for_akash_status_20nov.html`:
    order to the assistant is dropped, never edited. Flags nothing in the real corpus.
 8. **Index is rebuilt at start-up** (0.1 s) instead of being stored, so it cannot go stale.
 
-## recall@k (BM25, frozen eval_v1, 66 items with gold sources)
+## recall@k (frozen eval_v1, 66 items with gold sources)
 
-Full table: `evaluation/retrieval_results.md` (`python -m evaluation.retrieval_eval`, 2 s).
+Full table: `evaluation/retrieval_results.md`
+(`python -m evaluation.retrieval_eval --modes bm25 dense hybrid`, 24 s once the embeddings are cached).
 
-Default chunking 300/50, no stemming (the shipped default):
+**Hybrid vs BM25 vs dense** (default chunking 300/50, no stemming, organisation from the employee
+profile, which is what the agent now does):
+
+| Mode | doc R@1 | evidence R@1 | evidence R@5 | evidence R@10 | MRR |
+|---|---|---|---|---|---|
+| BM25 | 1.0 | 0.470 | 0.788 | 0.848 | 1.0 |
+| Dense (bge-small) | 0.985 | 0.439 | 0.758 | 0.879 | 0.992 |
+| **Hybrid (RRF)** | 1.0 | 0.561 | **0.848** | **0.955** | 1.0 |
+
+Hybrid finds the exact evidence quote in the top 5 for 4 more questions than BM25 (56 vs 52 of 66),
+and in the top 10 for 63 of 66. With no organisation at all, hybrid's doc R@1 is 0.879 against 0.712
+for BM25: dense search copes better with questions that do not name the organisation.
+
+Chunk size with hybrid and the profile organisation: 200/40 gives evidence R@5 0.879, 300/50 gives
+0.848, 400/60 gives 0.879. The spread is 2 questions of 66, which is noise at this size. 300/50
+stays the default: 400/60 chunks are near 500 estimated tokens and 5 of them had to be cut for
+embedding; 200/40 needs 870 chunks and more passages per answer.
+
+BM25 alone (default chunking, no stemming), by where the organisation comes from:
 
 | Organisation taken from | doc R@1 | doc R@5 | evidence R@5 | MRR |
 |---|---|---|---|---|
@@ -70,12 +92,16 @@ DEF employee. Several organisations can be passed with ";". For an organisation 
 corpus the filter returns `[]`, which the agent already turns into "the documents do not say".
 
 Known miss: dev items D01 and D06 (DEF probation) with the raw question. Filler words ("joined last
-week") outrank "probation". A short query with the org filter finds it first. Dense search should
-help; not measured yet.
+week") outrank "probation". A short query with the org filter finds it first.
+
+**Update 21 Nov:** the agent now passes the employee's organisation as `filters={"home_org": ...}`
+(see `agents/toolbox.py`). Search uses it only when the question names no organisation.
 
 ## Not verified
 
-- Real embeddings endpoint: response shape, speed, limits (run `tests/test_embed_live.py`, then
-  `retrieval.build --dense`, then `retrieval_eval --modes bm25 dense hybrid`).
-- Token estimate against the real tokenizer.
-- Behaviour on a larger corpus.
+- Behaviour on a larger corpus (the numbers above are for 8 documents).
+- The bge query prefix: used as bge recommends, its effect not measured.
+- Rate limits of the embeddings endpoint beyond the documented 16 texts per request. Building all
+  three chunk sizes (about 120 requests) gave no capacity errors.
+- Tests run search in BM25 mode (`tests/conftest.py`) so they never call the endpoint; only
+  `tests/test_embed_live.py` does.
