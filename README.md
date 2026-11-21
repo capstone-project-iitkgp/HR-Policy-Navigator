@@ -10,21 +10,21 @@ This commit is the repository skeleton and a FastAPI health check. The Week 1 ev
 | --- | --- |
 | `src/hr_navigator/llm/` | Endpoint client, JSON validation, retries |
 | `src/hr_navigator/prompts/` | Versioned prompt templates |
-| `src/hr_navigator/ingestion/` | Loaders and chunkers |
-| `src/hr_navigator/retrieval/` | BM25, dense retrieval, fusion, reranker, citations |
+| `src/hr_navigator/ingestion/` | Corpus manifest loader (hash-checked) and line-based chunker; chunks are exact slices of the source text |
+| `src/hr_navigator/retrieval/` | `search(query, k, filters)`: BM25, dense (cached bge-small vectors), RRF fusion; no reranker yet. Decision record: `docs/decisions/a4_retrieval.md` |
 | `src/hr_navigator/agents/` | Planner, executor, critic, orchestrator |
 | `src/hr_navigator/tools/` | Policy search, leave calculator, HR escalation |
 | `src/hr_navigator/state/` | Session memory |
-| `src/hr_navigator/safeguards/` | PII, prompt-injection defence, refusals, human review |
+| `src/hr_navigator/safeguards/` | Injection filter for retrieved text, PII redaction of API answers |
 | `src/hr_navigator/observability/` | Tracing (spans to `.cache/traces/*.jsonl`, off unless `TRACE=1` or `--trace`), trace summary, redaction |
 | `baselines/` | Week 1 single-prompt runners and frozen scores |
 | `experiments/` | Ablation configs and raw outputs |
 | `evaluation/` | Metrics, failure taxonomy, summary tables; H9: `h9_run.py` (run matrix), `h9_report.py` (tables for the report), doc `docs/decisions/h9_eval.md` |
-| `data/manifests/` | Document ids, sources, and checksums |
+| `data/manifests/` | `corpus_v1.csv`: document ids, organisations, sources, text checksums |
 | `data/eval/` | Frozen queries and, later, retrieval judgments |
-| `security_tests/` | Prompt-injection and PII cases |
+| `security_tests/` | `run_attacks.py`: planted-document check and the 12 injection/PII eval items through `/chat` |
 | `app/` | Front end; `app/chat_app.py` is the chat page (`streamlit run app/chat_app.py`), `app/trace_page.py` the trace viewer |
-| `deploy/` | Container setup |
+| `deploy/` | Dockerfile and how to run with `docker compose up --build` (see `deploy/README.md`) |
 | `traces/` | Redacted sample traces |
 | `tools/mock_llm/` | Local stand-in for the course LLM endpoint (see [Local LLM](#local-llm-stand-in)) |
 | `docs/` | Spec, architecture, corpus datacard, 12-page report |
@@ -60,6 +60,16 @@ Run it from this folder with `python -m uvicorn` (not the bare `uvicorn` command
 ```json
 {"status": "ok"}
 ```
+
+`POST /chat` takes `{"question", "session_id", "employee_id"}` and returns the agent's answer with citations (rate limit 10 per session per minute, response cache, PII redaction; see `src/hr_navigator/api/chat.py`). `GET /chat/status` shows the retrieval index in use.
+
+Policy search works offline (BM25) with no key. To add embedding search, fill the `EMBED_*` settings in `.env` (the embeddings server has its own key and CA file, from `VM02_Embeddings_Access.zip`) and run once. After that, search is hybrid (keyword plus embedding), which finds the evidence for more questions (see `docs/decisions/a4_retrieval.md`):
+
+```bash
+python -m hr_navigator.retrieval.build --dense
+```
+
+Retrieval quality on the frozen eval set: `python -m evaluation.retrieval_eval --modes bm25 dense hybrid` (writes `evaluation/retrieval_results.md`; without embeddings, leave out `--modes`). With Docker: `docker compose up --build` (see `deploy/README.md`).
 
 ## Local LLM stand-in
 

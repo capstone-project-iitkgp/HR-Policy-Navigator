@@ -1,0 +1,21 @@
+# Keep the build context small and secret-free.
+.git
+.venv
+venv
+.cache
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.env
+.env.*
+certs
+*.crt
+hrms/*.db
+hrms/*.db-journal
+data/raw
+data/processed
+evaluation/results
+traces
+experiments
+docs
+plan.html

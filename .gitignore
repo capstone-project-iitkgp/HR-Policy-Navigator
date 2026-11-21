@@ -38,3 +38,8 @@ qdrant_storage/
 .DS_Store
 .idea/
 .vscode/
+
+# Endpoint CA files (mounted into Docker from ./certs)
+certs/*
+!certs/.gitkeep
+*.crt

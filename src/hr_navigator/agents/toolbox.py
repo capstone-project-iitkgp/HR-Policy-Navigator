@@ -81,7 +81,7 @@ class ToolBox:
         for key in IDENTITY_ARGS:  # decision 7: the employee comes from the request, never the model
             args.pop(key, None)
         if name == POLICY_TOOL:
-            return self._policy_search(args)
+            return self._policy_search(args, actor_id)
         return ToolResult(hrms_tools.run_tool(actor_id, name, args), [])
 
     def escalate(self, actor_id: str, topic: str, summary: str) -> dict[str, Any]:
@@ -106,13 +106,27 @@ class ToolBox:
                 return None
         return dict(arguments) if isinstance(arguments, dict) else None
 
-    def _policy_search(self, args: dict[str, Any]) -> ToolResult:
+    def _home_org(self, actor_id: str) -> str | None:
+        """The employee's policy organisation from the HR profile; None if unknown."""
+        if not actor_id:
+            return None
+        try:
+            return self.profile(actor_id).get("policy_org") or None
+        except Exception:  # the profile is a hint for search; never let it stop the search
+            log.exception("profile lookup for policy_search failed")
+            return None
+
+    def _policy_search(self, args: dict[str, Any], actor_id: str = "") -> ToolResult:
         query = args.get("query")
         if set(args) - {"query"} or not isinstance(query, str) or not query.strip():
             return _error("bad_arguments", "policy_search needs exactly one argument, a non-empty 'query'.")
         query = query.strip()[:MAX_QUERY_CHARS]
         try:
-            found = list(self._search(query, k=SEARCH_K))
+            home = self._home_org(actor_id)
+            # The planner's queries rarely name the organisation ("probation duration for S02
+            # grade"); without this a DEF employee got BLDEDU's rule. search() uses it only when
+            # the query names no organisation (retrieval/engine.py, "Home organisation").
+            found = list(self._search(query, k=SEARCH_K, filters={"home_org": home} if home else None))
         except Exception:  # retrieval is another module; whatever it raises, the loop must go on
             log.exception("policy_search failed")
             return _error("search_failed", "The policy search failed. Try again or answer with what you have.")

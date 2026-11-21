@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HR Policy Navigator: implementation plan (Himadri + Akash)</title>
+<style>
+  :root { --ink:#1b1f24; --mute:#5b6570; --line:#d8dee4; --bg:#fff; --soft:#f6f8fa; --a:#0b6bcb; --h:#1a7f37; --both:#8250df; --warn:#9a6700; --bad:#cf222e; }
+  * { box-sizing: border-box; }
+  body { font: 15px/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: var(--ink); background: var(--bg); margin: 0; }
+  header { background:#0d1117; color:#fff; padding: 28px 24px; }
+  header h1 { margin:0 0 6px; font-size: 26px; }
+  header p { margin:0; color:#c9d1d9; }
+  nav { position: sticky; top:0; background:#fff; border-bottom:1px solid var(--line); padding:8px 24px; z-index:5; font-size:13px; overflow-x:auto; white-space:nowrap; }
+  nav a { margin-right:14px; color:var(--a); text-decoration:none; }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 24px 80px; }
+  h2 { margin-top: 40px; padding-bottom:6px; border-bottom:2px solid var(--line); font-size:21px; }
+  h3 { margin-top: 24px; font-size:17px; }
+  table { border-collapse: collapse; width:100%; margin: 10px 0 18px; font-size: 13.5px; }
+  th, td { border:1px solid var(--line); padding:6px 8px; vertical-align: top; text-align:left; }
+  th { background: var(--soft); }
+  code { background: var(--soft); padding: 1px 5px; border-radius:4px; font-size: 12.5px; }
+  pre { background:#0d1117; color:#e6edf3; padding:14px; border-radius:6px; overflow-x:auto; font-size:12.5px; line-height:1.4; }
+  .box { border:1px solid var(--line); border-left:5px solid var(--a); background: var(--soft); padding: 10px 14px; margin: 12px 0; border-radius:4px; }
+  .box.warn { border-left-color: var(--warn); }
+  .box.bad { border-left-color: var(--bad); }
+  .box.ok { border-left-color: var(--h); }
+  .tag { display:inline-block; font-size:11px; font-weight:600; padding:1px 7px; border-radius:10px; color:#fff; }
+  .A { background: var(--a); } .H { background: var(--h); } .B { background: var(--both); } .T { background:#6e7781; }
+  .unv { color: var(--warn); font-weight:600; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap:12px; }
+  .card { border:1px solid var(--line); border-radius:6px; padding:10px 14px; }
+  td.n, th.n { text-align:right; white-space:nowrap; }
+  td.gate { background:#fff8c5; font-weight:600; }
+  input[type=checkbox] { transform: scale(1.2); }
+  footer { color:var(--mute); font-size:12px; margin-top:40px; border-top:1px solid var(--line); padding-top:10px; }
+  @media print { nav { display:none; } header { background:#fff; color:#000; } header p { color:#333; } pre { white-space: pre-wrap; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>HR Policy Navigator: remaining implementation plan</h1>
+  <p>Builders: Himadri + Akash &nbsp;|&nbsp; Written Mon 16 Nov 2026 (night) &nbsp;|&nbsp; Submission Fri 27 Nov 2026, no extensions &nbsp;|&nbsp; Status: <b>approved plan, nothing built yet</b></p>
+</header>
+<nav>
+  <a href="#summary">Summary</a><a href="#facts">Facts</a><a href="#arch">Architecture</a><a href="#contracts">Contracts</a>
+  <a href="#akash">Akash tasks</a><a href="#himadri">Himadri tasks</a><a href="#schedule">Schedule</a><a href="#cuts">Cuts</a>
+  <a href="#risks">Risks</a><a href="#rules">Working rules</a><a href="#others">Other three</a><a href="#mentor">Mentor Qs</a><a href="#verify">Verification</a><a href="#open">Open items</a>
+</nav>
+<main>
+
+<h2 id="summary">1. Summary</h2>
+<div class="box">
+PR #1 is merged. <code>main</code> (4ee9a5a) has the scaffold, the dummy HRMS (<code>hrms/</code>: 8 agent tools, MCP server, Streamlit page, 212 tests), the local LLM stand-in (<code>tools/mock_llm</code>) and 20 DRAFT HRMS eval items. Every other package under <code>src/hr_navigator/</code> (llm, prompts, ingestion, retrieval, agents, tools, state, safeguards, observability) is still an empty <code>.gitkeep</code> folder, and <code>main.py</code> only serves <code>/health</code> and the <code>/hrms</code> router.
+</div>
+<p>Two people build the rest: <span class="tag A">Akash</span> owns knowledge (corpus, ingestion, retrieval, recall@k) plus platform (API, Docker, rate limit, cache, safeguards). <span class="tag H">Himadri</span> owns model and agent (LLM client, baselines, eval harness, agent loop, tools, tracing, UI, full eval runs). Both review each other's PRs.</p>
+<p>Capacity is about 2 h per weekday and 6+ h per weekend day each, which gives roughly <b>26 h each</b> until code freeze on <b>Wed 25 Nov night</b>. The task estimates below add up to more than that, so the plan carries an ordered cut list (section 8) and gates (section 7).</p>
+<table>
+<tr><th>Decision</th><th>Value</th><th>Source</th></tr>
+<tr><td>Who writes code</td><td>Claude drafts, humans review (Handbook 6.2 risk accepted; disclose in report and to the mentor)</td><td>Himadri, 16 Nov</td></tr>
+<tr><td>Agreed with Akash yet?</td><td class="unv">No. Python 3.12, no LangGraph, NumPy index, Phoenix container are my recommendations</td><td>This plan</td></tr>
+<tr><td>Report</td><td>12-page report is part of the 27 Nov submission; only the presentation is 5 Dec</td><td>Briefing section 2</td></tr>
+</table>
+
+<h2 id="facts">2. Facts established on 16 Nov (verified from files)</h2>
+<table>
+<tr><th>Fact</th><th>Evidence</th><th>Effect</th></tr>
+<tr><td><b>An embeddings endpoint exists.</b> <code>https://103.42.50.41:1035/v1/embeddings</code>, model <code>bge-small-en-v1.5</code>, 384-d, max 16 texts per request, 512 tokens per chunk, own CA <code>vm02-ca.crt</code>, shared key (in the zip; not copied anywhere)</td><td>13 Nov upGrad email and <code>Embedding_EndPoint/VM02_Embeddings_Access.zip</code> quickstart</td><td>Dense retrieval needs no local torch. Guide, briefing and memory still say "no embeddings": update them</td></tr>
+<tr><td><b>The corpus is effectively empty.</b> The Downloads copy has three register CSVs (6, 4 and 10 rows), 30 seed URLs and a downloader script, but no documents. Real policies in hand: the 8 eval sources plus DOC-008 and DOC-009</td><td><code>~/Downloads/capstone-project-iitkgp-artefacts</code></td><td>Biggest critical-path risk. Corpus becomes Akash's first big task</td></tr>
+<tr><td>Tracker has no real owners for detail tasks; corpus sets (Srinivas, Sakshi, Jk) have no output</td><td><code>HR_Policy_Navigator_Team_Task_Tracker.xlsx</code></td><td>Re-assign after this plan is agreed</td></tr>
+<tr><td>Python 3.15 is the repo's stated version, but PyTorch only just gained 3.15 wheels (Windows retest 30 Oct) and 7 of 45 popular packages failed to install on 3.15 in one test</td><td>web search 16 Nov</td><td>Recommend Python 3.12 for venv and Docker. Needs Akash's agreement because the README says 3.15</td></tr>
+<tr><td>Eval set (80 Q) already carries <code>expected_tools</code>, <code>must_not</code>, <code>gold_facts</code>, <code>gold_sources</code>, <code>evidence_quotes</code>. Types: lookup 20, eligibility 12, synthesis 10, procedural 8, unanswerable 8, injection 6, ambiguous 6, pii_overreach 6, conflicting 4</td><td><code>05_My_Task_Eval_Set/eval_v1.jsonl</code></td><td>The scorer can be mostly rule-based</td></tr>
+<tr><td>Chat API limits: Qwen3-8B, 1 concurrent request per key, 60 req/min, 8192 tokens in+out, 1024 max output. Zscaler must be OFF</td><td>Learner Guide, 12 Nov smoke test</td><td>One eval runner at a time; cache every call</td></tr>
+<tr><td>Mentor wants a live demoable agentic UI, simple self-explanatory code, a dummy DB (done) and apply-leave actions if time allows</td><td>Session #1 transcript, 14 Nov</td><td>HRMS tools plug into the agent</td></tr>
+</table>
+
+<h2 id="arch">3. Target architecture</h2>
+<pre>
+Streamlit UI  ─────►  FastAPI /chat  ─────►  Orchestrator (explicit state machine, max 10 steps)
+ persona login          rate limit             Planner ─► Executor ─► Critic
+ citations              response cache              │          │          │
+ step-trace view        session store               │          │     validate_response
+ Confirm buttons                                    ▼          ▼
+ (drafts only)                              search_policy   HRMS tools (8, draft-only, actor from session)
+                                                    │
+                               Hybrid retrieval:  BM25 + dense (bge-small via :1035)
+                                                    └─ RRF fusion ─ cross-encoder rerank ─ cited passages
+LLM client: Qwen3-8B via :1033, 1 concurrent, thinking off, JSON-schema validate + 1 retry, disk cache
+Tracing:    OpenTelemetry spans ─► Arize Phoenix container  (fallback: JSONL + Streamlit trace page)
+Evaluation: runner ─► run records (JSONL) ─► scorer ─► failure taxonomy ─► comparison table
+            variants: V0 closed-book | V1 best prompt strategy | V2 single-agent RAG | V3 full agentic
+</pre>
+<h3>Design choices (my recommendations; reversible; each goes in the report with numbers)</h3>
+<table>
+<tr><th>Choice</th><th>Why</th><th>Alternative</th></tr>
+<tr><td>Hand-rolled typed state machine (pydantic state, step counter, repeated-call detector), about 150 lines</td><td>Mentor asked for simple, readable code. Explicit control flow. Fewer dependencies on a new Python. The brief does not mandate LangGraph</td><td>LangGraph (taught in lecture 43; more moving parts)</td></tr>
+<tr><td>Dense index in NumPy: cosine over a cached <code>.npy</code> matrix</td><td>Even 60k chunks x 384 floats is about 90 MB. No vector DB to install or explain</td><td>FAISS, Chroma</td></tr>
+<tr><td>BM25 via <code>rank_bm25</code>; RRF (k=60) fusion; small cross-encoder reranker run locally</td><td>Matches brief (BM25 + dense + reranker). Day-1 check <code>fastembed</code> (ONNX, no torch) vs <code>sentence-transformers</code>; keep whichever installs cleanly on 3.12, Apple silicon and Docker</td><td>LLM reranker (too slow at 1 concurrent request)</td></tr>
+<tr><td>Phoenix in its own docker-compose service; app depends only on <code>opentelemetry-sdk</code> + OTLP exporter</td><td>Keeps heavy deps out of the app image. Brief allows OpenTelemetry</td><td>JSONL + Streamlit trace page (fallback; ask the mentor if it counts as "trace dashboard")</td></tr>
+<tr><td>Tools: <code>search_policy</code> (new), HRMS <code>check_leave_request</code> / balances / draft (exist), <code>validate_response</code> (new, deterministic), optional <code>escalate_to_hr</code></td><td>Brief needs at least 3 real tools. HRMS ones already validated, draft-only, audited</td><td>-</td></tr>
+<tr><td>Baselines are closed-book with 3 prompt strategies, plus an "oracle passage in context" ablation</td><td>The oracle run separates retrieval errors from reasoning errors for the failure taxonomy</td><td>-</td></tr>
+</table>
+
+<h2 id="contracts">4. Interfaces to agree on Day 1 (Tue 17, one 1-hour call)</h2>
+<p>Commit as code stubs in <code>src/hr_navigator/schemas.py</code> before anyone builds on them. Branch rule: feature branches and PRs, the other person reviews, <code>main</code> always passes <code>pytest</code>.</p>
+<table>
+<tr><th>Contract</th><th>Shape</th><th>Owner</th></tr>
+<tr><td><code>Passage</code></td><td><code>doc_id, chunk_id, text, title, org, jurisdiction, category, url, version_date, synthetic, scores{bm25, dense, rrf, rerank}</code></td><td><span class="tag B">both</span></td></tr>
+<tr><td><code>retrieval.search(query, k=5, filters=None) -&gt; list[Passage]</code></td><td>Akash ships a stub returning fixtures from the 8-doc mini corpus on Day 1, so the agent work is never blocked</td><td><span class="tag A">Akash</span></td></tr>
+<tr><td><code>llm.client.chat(messages, *, schema=None, max_tokens, tag) -&gt; ChatResult</code></td><td><code>text, parsed, usage, latency_ms, cached</code></td><td><span class="tag H">Himadri</span></td></tr>
+<tr><td><code>llm.embed(texts) -&gt; ndarray</code></td><td>Batches of 16, 512-token cap, retry on capacity errors, disk cache</td><td><span class="tag A">Akash</span></td></tr>
+<tr><td><code>llm/http.py</code></td><td>Shared TLS (CA file per endpoint), key from env, backoff 2/4/8 s on 429/503, global 1-concurrent lock. Himadri writes first (about 1 h)</td><td><span class="tag H">Himadri</span></td></tr>
+<tr><td><code>AgentRequest</code> / <code>AgentResponse</code></td><td>request: <code>question, session_id, employee_id</code>. response: <code>answer, citations[], steps[], tool_calls[], status, usage</code></td><td><span class="tag B">both</span></td></tr>
+<tr><td><code>RunRecord</code></td><td>The existing <code>05_My_Task_Eval_Set/run_record_schema.md</code>, moved into <code>evaluation/</code></td><td><span class="tag H">Himadri</span></td></tr>
+<tr><td>Config</td><td><code>.env</code> only: <code>CHAT_BASE_URL, CHAT_MODEL, API_KEY, EMBED_BASE_URL, EMBED_MODEL, EMBED_API_KEY, CAPSTONE_CA_CERT, EMBED_CA_CERT</code>. Never put a key in code, docs or git</td><td><span class="tag B">both</span></td></tr>
+</table>
+<div class="box warn"><b>Two decisions to take on the same call:</b> Python version (3.12 vs 3.15) and agent framework (state machine vs LangGraph). Record the outcome in <code>docs/decisions/</code>.</div>
+
+<h2 id="akash">5. Akash: knowledge and platform (<span class="tag A">about 32 h</span>)</h2>
+<table>
+<tr><th></th><th>#</th><th>Task</th><th>Done when</th><th class="n">h</th><th>Window</th></tr>
+<tr><td><input type="checkbox" data-k="A1"></td><td>A1</td><td>Stub <code>search()</code> with fixtures. Confirm the embeddings endpoint and cert from his machine (key entered with <code>read -s</code>, never in files)</td><td>Stub merged; one real embeddings call succeeded</td><td class="n">1</td><td>Tue 17</td></tr>
+<tr><td><input type="checkbox" data-k="A2"></td><td>A2</td><td><b>Corpus build.</b> Run <code>collect_hr_policies.py</code> over <code>seed_sources.csv</code>; add the 8 eval source docs and DOC-008/009; dedupe by SHA-256; register metadata (org, jurisdiction, category, URL, version/effective date, retrieved date, licence). Optionally a labelled <code>synthetic/</code> partition (see risk 1)</td><td><code>data/manifests/corpus_v1.csv</code>; raw files not committed; honest count written down</td><td class="n">6</td><td>Wed 18 - Fri 20</td></tr>
+<tr><td><input type="checkbox" data-k="A3"></td><td>A3</td><td>Ingestion: PDF/HTML/DOCX to text with a metadata header; chunker with two settings (for example 256/50 and 512/100 tokens); embeddings cache</td><td>Index rebuilds from the manifest with one command</td><td class="n">5</td><td>Thu 19 - Sat 21</td></tr>
+<tr><td><input type="checkbox" data-k="A4"></td><td>A4</td><td>BM25 + dense + RRF + reranker; <code>search_policy</code> returns citation-ready passages</td><td>Unit tests; real passages for the 80 eval questions</td><td class="n">6</td><td>Sat 21 - Sun 22</td></tr>
+<tr><td><input type="checkbox" data-k="A5"></td><td>A5</td><td><b>recall@k harness</b> against <code>gold_sources</code> / <code>evidence_quotes</code>. Compare chunking x {BM25, dense, hybrid, hybrid+rerank}</td><td><code>evaluation/retrieval_results.csv</code> for the report</td><td class="n">4</td><td>Sun 22 - Mon 23</td></tr>
+<tr><td><input type="checkbox" data-k="A6"></td><td>A6</td><td>FastAPI <code>/chat</code> with sessions, rate limiting and a response cache. Dockerfile and compose (api, ui, phoenix). Clean-clone README test</td><td><code>docker compose up</code> works from a fresh clone</td><td class="n">6</td><td>Mon 23 - Wed 25</td></tr>
+<tr><td><input type="checkbox" data-k="A7"></td><td>A7</td><td>Safeguards: retrieved text treated as untrusted data (delimiters, instruction-in-passage filter), PII redaction, refusal rules. Tests from the 6 injection and 6 pii_overreach eval items plus one planted-injection document</td><td><code>safeguards/</code>, <code>security_tests/</code>, attack-success table</td><td class="n">4</td><td>Tue 24 - Wed 25</td></tr>
+</table>
+
+<h2 id="himadri">6. Himadri: model, agent and evaluation (<span class="tag H">about 37 h</span>)</h2>
+<table>
+<tr><th></th><th>#</th><th>Task</th><th>Done when</th><th class="n">h</th><th>Window</th></tr>
+<tr><td><input type="checkbox" data-k="H1"></td><td>H1</td><td>Schemas, <code>llm/http.py</code>, chat client: thinking off (<code>chat_template_kwargs.enable_thinking=false</code>), strip <code>&lt;think&gt;</code>, JSON-schema validate with one retry, disk cache, usage and latency accounting. Run the guide 9c.2 probes on the real endpoint (thinking flag, <code>seed</code>, <code>response_format</code>, <code>tool_choice</code>, whether the 1024 cap includes reasoning)</td><td>Client merged; probe results in <code>docs/decisions/</code></td><td class="n">3</td><td>Tue 17 - Wed 18</td></tr>
+<tr><td><input type="checkbox" data-k="H2"></td><td>H2</td><td>Eval harness: resumable runner (variant x question, cached) and scorer finished from the <code>score_eval.py</code> skeleton (gold facts, citation check, <code>must_not</code>, refusal, expected tools). Confirm eval_v1 is frozen (hash + git tag)</td><td><code>evaluation/run_eval.py</code>, <code>score.py</code>; run records written</td><td class="n">5</td><td>Wed 18 - Fri 20</td></tr>
+<tr><td><input type="checkbox" data-k="H3"></td><td>H3</td><td><b>Week-1 baselines</b> on the frozen set: single prompt, structured + few-shot, CoT / decomposition. Record how Qwen3-8B breaks (specific examples)</td><td>Baseline table and failure examples</td><td class="n">3</td><td>Fri 20 - Sat 21</td></tr>
+<tr><td><input type="checkbox" data-k="H4"></td><td>H4</td><td>Versioned prompts for planner, executor, critic and cited answer</td><td><code>prompts/</code> with a short change log</td><td class="n">3</td><td>Sat 21</td></tr>
+<tr><td><input type="checkbox" data-k="H5"></td><td>H5</td><td><b>Agent loop</b>: typed state, planner to executor to critic, 10-step cap, repeated-call detector, handling for malformed JSON, tool failure and token budget, session memory in SQLite (no PII beyond employee id). Tests against stub retrieval and <code>mock_llm</code></td><td>Each failure mode has a test</td><td class="n">8</td><td>Sat 21 - Mon 23</td></tr>
+<tr><td><input type="checkbox" data-k="H6"></td><td>H6</td><td>Tools: wire <code>hrms.agent_tools.tool_schemas()</code> and <code>run_tool()</code> (actor from the session, never from the model), <code>validate_response</code>, <code>escalate_to_hr</code></td><td>Tool tests green</td><td class="n">3</td><td>Sun 22 - Mon 23</td></tr>
+<tr><td><input type="checkbox" data-k="H7"></td><td>H7</td><td>Tracing: OpenTelemetry spans around plan, step, tool and LLM call (OpenInference attribute names) to Phoenix, or JSONL fallback</td><td>A real query's trace is viewable</td><td class="n">3</td><td>Mon 23 - Tue 24</td></tr>
+<tr><td><input type="checkbox" data-k="H8"></td><td>H8</td><td>Streamlit chat: citations, step-trace expander, persona switcher reusing <code>hrms/demo_app.py</code>, Confirm buttons for drafts</td><td>Live demo path works end to end</td><td class="n">4</td><td>Tue 24 - Wed 25</td></tr>
+<tr><td><input type="checkbox" data-k="H9"></td><td>H9</td><td>Full eval runs for V2 and V3 plus the 20 HRMS items; failure-taxonomy labelling; comparison table; LLM judge only for residual cases</td><td><code>evaluation/results/</code>; tables for the report</td><td class="n">5</td><td>Tue 24 - Thu 26</td></tr>
+</table>
+<h3>Both</h3>
+<ul>
+<li><span class="tag B">both</span> Day-1 call (1 h each). Review each other's PRs (about 20 min each): this is also the Handbook 6.2 control.</li>
+<li><span class="tag B">both</span> Every Claude-drafted module ends with: what it does, what is unverified, and a 2-minute "explain it back" check by the reviewer.</li>
+<li><span class="tag B">both</span> Keep an AI-use log in <code>docs/</code> (what Claude drafted, who reviewed, when).</li>
+</ul>
+
+<h2 id="schedule">7. Schedule and gates</h2>
+<p>Critical path: corpus, index, retrieval, agent integration, full eval, report tables.</p>
+<table>
+<tr><th>Day</th><th><span class="tag A">Akash</span></th><th><span class="tag H">Himadri</span></th><th>Gate</th></tr>
+<tr><td>Tue 17</td><td>A1 stub and endpoint check</td><td>H1 client and probes</td><td class="gate">Contracts merged</td></tr>
+<tr><td>Wed 18 - Fri 20</td><td>A2 corpus, start A3</td><td>H2 harness and scorer, H3 baselines</td><td class="gate">Baselines recorded; at least 150 usable docs; eval set frozen</td></tr>
+<tr><td>Sat 21 (class 31, 10:00-13:00)</td><td>A3 / A4</td><td>H4 prompts, start H5</td><td class="gate">Retrieval returns real passages</td></tr>
+<tr><td>Sun 22</td><td>A4 hybrid + rerank</td><td>H5 / H6 agent and tools</td><td class="gate">Agent runs on stub retrieval</td></tr>
+<tr><td>Mon 23</td><td>A5 recall@k</td><td>H5 / H6 finish, H7 start</td><td class="gate">Agent + real retrieval integrated</td></tr>
+<tr><td>Tue 24</td><td>A6 API + Docker, A7</td><td>H7, H8, start H9</td><td class="gate">First full V2 run overnight</td></tr>
+<tr><td>Wed 25</td><td>A6 / A7 finish</td><td>H8, H9 V3 run</td><td class="gate">CODE FREEZE (night)</td></tr>
+<tr><td>Thu 26</td><td>Clean-room README test, demo script</td><td>Result tables, failure taxonomy</td><td class="gate">Results frozen</td></tr>
+<tr><td>Fri 27</td><td colspan="2">Submit by the afternoon, leaving buffer. Submission page location still unknown: ask Shruti</td><td class="gate">Submitted</td></tr>
+</table>
+<p>Mentor session #2: only Jk can book it, at least 24 h ahead, one per 7 days, so the earliest is Sat 21 Nov. Ask him to book the first slot after that.</p>
+<p>Hours check (each): Tue-Fri 17-20 about 8 h, Sat-Sun 21-22 about 12 h, Mon-Wed 23-25 about 6 h, total about 26 h before code freeze; Thu-Fri about 4 h more for tables and submission.</p>
+
+<h2 id="cuts">8. Scope cuts, in this order, decided at each gate</h2>
+<ol>
+<li>Third prompt strategy beyond decomposition and CoT, and self-consistency (note as a limitation; the brief asks for at least 3 strategies, so keep structured + few-shot, CoT and decomposition if at all possible).</li>
+<li>LLM-as-judge. Keep the rule-based scorer plus a small human-checked sample.</li>
+<li>Phoenix container: use the JSONL trace page instead.</li>
+<li>Cross-session memory beyond one session store.</li>
+<li>Corpus growth beyond what is cleanly collected. Report the real number.</li>
+<li>Reranker, only as a last resort. The brief names it, so report honestly if it is dropped.</li>
+</ol>
+<div class="box ok"><b>Do not cut:</b> frozen eval and baseline numbers; hybrid retrieval with recall@k reported separately from answer quality; planner/executor/critic with the 10-step cap; at least 3 real tools; one real trace view; Docker run from a clean clone; injection test results; human-in-the-loop for leave actions; the "what we did to compensate for a small model" section (explicitly graded).</div>
+
+<h2 id="risks">9. Risks and handling</h2>
+<table>
+<tr><th>#</th><th>Risk</th><th>Handling</th></tr>
+<tr><td>1</td><td><b>Fewer than 500 real documents.</b> Realistically 100-300 from 30 seeds in 11 days</td><td>(a) Report the real count honestly. (b) Add a clearly labelled synthetic partition of fictional-company policies (the team plan already said "fictional HR documents"), <code>synthetic=true</code> in metadata. (c) Do not pad with duplicates (plan and brief both warn). Ask the mentor in session #2 which is acceptable</td></tr>
+<tr><td>2</td><td>One concurrent request per key shared by five people</td><td>One person runs long evals; cache every call on disk; develop on <code>mock_llm</code> (Llama) but test prompts on real Qwen early. <span class="unv">UNVERIFIED</span>: how the real API enforces 429 vs queue and clamp vs reject</td></tr>
+<tr><td>3</td><td>Python 3.15 wheels</td><td>Decide 3.12 on Day 1; test every dependency install inside the Docker image before relying on it</td></tr>
+<tr><td>4</td><td>Zscaler on office laptops resets TLS to both VMs</td><td>Do API work and the demo from a network without Zscaler</td></tr>
+<tr><td>5</td><td>Handbook 6.2: AI-drafted core code</td><td>Accepted by the team. AI-use log, PR cross-review, both of you able to explain retrieval and the agent loop live, disclosure to mentor and in the report. The mentor said verbally that AI tools are fine if the code is simple and understood</td></tr>
+<tr><td>6</td><td>Eval items are DRAFT (80 in eval_v1, 20 in hrms_ext_v1), AI-assisted, no human reviewer yet</td><td>Human pass by Sakshi/Srinivas and you, then freeze with a hash and tag; otherwise the report must say so</td></tr>
+<tr><td>7</td><td>Report is due 27 Nov</td><td>Other three draft now (section 11); you two supply tables on Thu 26</td></tr>
+<tr><td>8</td><td>Prompts tuned on Llama (stand-in) may not transfer to Qwen3-8B</td><td>H1 probes and a real-Qwen run on 10 questions by Fri 20</td></tr>
+<tr><td>9</td><td>Embeddings endpoint is shared; capacity errors possible; limits not documented</td><td>Cache embeddings on disk so each chunk is embedded once; throttle; retry with backoff</td></tr>
+<tr><td>10</td><td>API access may end before 27 Nov (end date unknown)</td><td>Cache all responses; run the final evals early (Tue 24 - Wed 25), not on the last day</td></tr>
+</table>
+
+<h2 id="rules">10. Working agreements</h2>
+<ul>
+<li>You commit and push, with one-line commit messages; small PRs, merged daily; <code>pytest</code> green on <code>main</code>.</li>
+<li>You run installs yourself with <code>!</code>; before any pin change, check compatibility (the earlier Streamlit vs FastAPI incident). Say which pins may move.</li>
+<li>Keys never go into code, notes, the guide or git. <code>.env</code> is gitignored. The shared embedding key and the chat key stay in the original zip/email only.</li>
+<li>Keep READMEs, <code>docs/decisions/*</code>, the capstone guide (<code>tools/build_capstone_html.py</code>) and memory in step with behaviour.</li>
+<li>Status post in the team chat each day: Done / Next / Blocked (also feeds the 25 % punctuality score).</li>
+</ul>
+
+<h2 id="others">11. For Jk, Sakshi and Srinivas (no code)</h2>
+<table>
+<tr><th>Who</th><th>Ask</th><th>By</th></tr>
+<tr><td>Sakshi, Srinivas, Jk</td><td>Run <code>collect_hr_policies.py</code> (Windows-ready) on their share of the seeds; upload raw files and register rows to Drive; verify organisation, version and licence for each</td><td>Thu 19</td></tr>
+<tr><td>Sakshi, Srinivas</td><td>Human review of the 80 + 20 eval items (the review CSVs exist), report disagreements</td><td>Thu 19</td></tr>
+<tr><td>All three</td><td>Draft report sections: problem and spec, eval-set design, responsible AI, limitations; plus the demo script. You supply tables and numbers on Thu 26</td><td>Wed 25 draft</td></tr>
+<tr><td>Jk</td><td>Book mentor session #2 (first slot after 21 Nov); ask Shruti where the submission page is</td><td>Tue 17</td></tr>
+</table>
+
+<h2 id="mentor">12. Questions for mentor session #2</h2>
+<ol>
+<li>Is a labelled synthetic partition acceptable beside the real corpus, and how should the document count be reported?</li>
+<li>Is Phoenix / OpenTelemetry (or a JSONL trace page) acceptable as the "trace dashboard"?</li>
+<li>Rate limit and quota of the embeddings endpoint; per-team token quota on the chat endpoint; API end date.</li>
+<li>Wording of the Handbook 6.2 disclosure. Rubric and how punctuality is scored.</li>
+<li>Is the 5 Dec presentation in person or online?</li>
+</ol>
+
+<h2 id="verify">13. Verification: how we will know it works</h2>
+<table>
+<tr><th>Area</th><th>Check</th></tr>
+<tr><td>Repo health</td><td><code>pytest</code> green on <code>main</code> after each merge (HRMS 212 + mock_llm 241 + new tests)</td></tr>
+<tr><td>Endpoints (Day 1)</td><td>One real chat call (:1033) and one embeddings call (:1035) from each machine, Zscaler off</td></tr>
+<tr><td>Retrieval</td><td>recall@k table: chunking x {BM25, dense, hybrid, hybrid+rerank}</td></tr>
+<tr><td>Agent</td><td>Unit tests for malformed JSON, tool exception, repeated action, token cap and the 10-step cap using <code>mock_llm</code>; then a real-Qwen run on 10 questions</td></tr>
+<tr><td>Evaluation</td><td>V0 to V3 on the frozen set with the same scorer; report whether agentic really beats single-agent RAG, with latency and tool-call cost</td></tr>
+<tr><td>Safety</td><td>Injection and PII suite results saved in <code>security_tests/</code>; leave actions never submitted without the Confirm button</td></tr>
+<tr><td>Ship</td><td>Fresh clone, then <code>docker compose up</code>, then the UI answers a cited question and shows a trace</td></tr>
+</table>
+
+<h2 id="open">14. Open items</h2>
+<ul>
+<li><input type="checkbox" data-k="O1"> Akash agrees: Python 3.12, state machine instead of LangGraph, NumPy index, Phoenix container.</li>
+<li><input type="checkbox" data-k="O2"> Is eval_v1 frozen (hash + tag)? The memory says the target was 15 Nov; not confirmed.</li>
+<li><input type="checkbox" data-k="O3"> What came out of the Mon 16 Nov 7 PM team call (not seen).</li>
+<li><input type="checkbox" data-k="O4"> Update the capstone guide, briefing and <code>07_Open_Questions</code> for the embeddings endpoint and the corpus status (via the template and build script).</li>
+<li><input type="checkbox" data-k="O5"> Re-assign owners in the tracker sheet.</li>
+<li><input type="checkbox" data-k="O6"> Draft the team WhatsApp message (section 11 asks).</li>
+</ul>
+
+<footer>
+Plan source: <code>~/.claude/plans/akash-has-merged-my-cozy-bengio.md</code>. Facts came from the repo (<code>main</code> 4ee9a5a), the capstone guide, the 13 Nov embeddings email, the Downloads artefacts copy and the 16 Nov web check on Python 3.15 wheels. Estimates and recommendations are mine and unmeasured. Contains no API keys. Checkboxes are saved in this browser only.
+</footer>
+</main>
+<script>
+  document.querySelectorAll('input[type=checkbox][data-k]').forEach(function (c) {
+    var key = 'plan-' + c.dataset.k;
+    c.checked = localStorage.getItem(key) === '1';
+    c.addEventListener('change', function () { localStorage.setItem(key, c.checked ? '1' : '0'); });
+  });
+</script>
+</body>
+</html>

@@ -120,3 +120,13 @@ def test_escalate_by_code_writes_an_agent_audit_row(monkeypatch, tmp_path):
     with closing(db.get_conn()) as conn:
         row = conn.execute("SELECT actor, channel FROM audit_log WHERE action = 'escalate_to_hr'").fetchone()
     assert tuple(row) == ("D010", "agent")
+
+
+def test_policy_search_passes_the_employees_org_as_home_org():
+    """The live-run bug: queries name no organisation, so search needs the profile's."""
+    seen = []
+    box = ToolBox(lambda q, k=5, filters=None: seen.append(filters) or [])
+    box.run(POLICY_TOOL, {"query": "probation duration"}, WHO)
+    assert seen[-1] == {"home_org": box.profile(WHO)["policy_org"]} and seen[-1]["home_org"]
+    box.run(POLICY_TOOL, {"query": "probation duration"}, "")  # no employee: no filter
+    assert seen[-1] is None
