@@ -1,0 +1,11 @@
+@page { size: A4; margin: 16mm 15mm }
+body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10.6pt; line-height: 1.4; }
+h1 { font-size: 14pt; margin: 14pt 0 4pt; border-bottom: 1px solid #999; }
+h2 { font-size: 11pt; margin: 9pt 0 3pt; }
+header h1.title { font-size: 20pt; border: 0; margin-bottom: 2pt }
+p.subtitle { font-size: 11pt; color: #444; margin: 0 }
+table { border-collapse: collapse; width: 100%; margin: 5pt 0; font-size: 9.2pt; page-break-inside: avoid }
+th, td { border: 1px solid #aaa; padding: 2pt 4pt; vertical-align: top }
+th { background: #eee }
+pre, code { font-family: Menlo, monospace; font-size: 7.8pt }
+pre { background: #f5f5f5; padding: 5pt; white-space: pre-wrap }
